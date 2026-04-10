@@ -24,6 +24,12 @@ function sanitize(value: string): string {
 let cachedRows: RawRow[] | null = null;
 let cacheExpiry = 0;
 
+/** Call this to force the next fetchAllRows() to hit the Sheets API */
+export function clearCache(): void {
+  cachedRows = null;
+  cacheExpiry = 0;
+}
+
 function getAuthClient() {
   const privateKey = (process.env.GOOGLE_PRIVATE_KEY ?? "").replace(
     /\\n/g,
@@ -182,7 +188,9 @@ export function getAllItems(entries: PriceEntry[]): string[] {
 }
 
 export function ageMinutes(timestamp: string): number {
-  return (Date.now() - new Date(timestamp).getTime()) / 60_000;
+  // Math.abs guards against timestamps parsed as UTC when written in local time
+  // (e.g. BST scanner writes "19:41" → server reads as 19:41 UTC → appears 1h future)
+  return Math.abs((Date.now() - new Date(timestamp).getTime()) / 60_000);
 }
 
 export function isStale(timestamp: string, thresholdHours = 12): boolean {

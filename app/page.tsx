@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import PageWrapper from "@/components/PageWrapper";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
@@ -10,6 +10,7 @@ interface DashboardData {
   stats: DashboardStats;
   trades: TradeOpportunity[];
   freshness: CityFreshness[];
+  fetchedAt: string;
   recentActivity: Array<{
     timestamp: string;
     city: string;
@@ -21,17 +22,22 @@ interface DashboardData {
   }>;
 }
 
+// Math.abs() on both functions — timestamps without timezone can parse as UTC
+// on the server even when written in local time, making them appear in the future
 function freshnessColor(ageMinutes: number | null): string {
   if (ageMinutes === null) return "var(--text-dim)";
-  if (ageMinutes < 60) return "var(--profit-light)";
-  if (ageMinutes < 720) return "var(--gold)";
+  const abs = Math.abs(ageMinutes);
+  if (abs < 60) return "var(--profit-light)";
+  if (abs < 720) return "var(--gold)";
   return "var(--loss-light)";
 }
 
 function freshnessLabel(ageMinutes: number | null): string {
   if (ageMinutes === null) return "No data";
-  if (ageMinutes < 60) return `${Math.round(ageMinutes)}m ago`;
-  const hrs = ageMinutes / 60;
+  const abs = Math.abs(ageMinutes);
+  if (abs < 2) return "just now";
+  if (abs < 60) return `${Math.round(abs)}m ago`;
+  const hrs = abs / 60;
   if (hrs < 24) return `${hrs.toFixed(1)}h ago`;
   return `${(hrs / 24).toFixed(1)}d ago`;
 }
@@ -91,27 +97,72 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
 export default function OverviewPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/data")
+  const loadData = useCallback((bust = false) => {
+    const url = bust ? "/api/data?refresh=true" : "/api/data";
+    return fetch(url, { cache: "no-store" })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
       })
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        setError(null);
+      })
       .catch((e) => setError(e.message));
   }, []);
+
+  // Initial load
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadData(true); // bust server cache
+    setRefreshing(false);
+  };
 
   if (error) return <ErrorDisplay message={`Failed to load dashboard: ${error}`} />;
   if (!data) return <LoadingSpinner />;
 
-  const { stats, trades, freshness, recentActivity } = data;
+  const { stats, trades, freshness, recentActivity, fetchedAt } = data;
   const top5 = trades.slice(0, 5);
+
+  const fetchedLabel = fetchedAt
+    ? new Date(fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : null;
 
   return (
     <PageWrapper
       title="Merchant's Overview"
       subtitle="Live intelligence from the trading network"
+      actions={
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          {fetchedLabel && (
+            <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", fontFamily: "'JetBrains Mono', monospace" }}>
+              Last refreshed: {fetchedLabel}
+            </span>
+          )}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            style={{
+              background: refreshing ? "var(--leather-mid)" : "var(--leather-light)",
+              border: "1px solid var(--border-gold)",
+              color: refreshing ? "var(--text-dim)" : "var(--gold)",
+              padding: "0.35rem 0.9rem",
+              borderRadius: 3,
+              cursor: refreshing ? "not-allowed" : "pointer",
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "0.9rem",
+              letterSpacing: "0.05em",
+              transition: "all 0.2s",
+            }}
+          >
+            {refreshing ? "Refreshing…" : "⟳ Refresh"}
+          </button>
+        </div>
+      }
     >
       {/* Stat Cards */}
       <div
@@ -175,11 +226,7 @@ export default function OverviewPage() {
             </h2>
             <a
               href="/routes"
-              style={{
-                fontSize: "0.75rem",
-                color: "var(--text-dim)",
-                textDecoration: "none",
-              }}
+              style={{ fontSize: "0.75rem", color: "var(--text-dim)", textDecoration: "none" }}
             >
               View all →
             </a>
@@ -229,13 +276,7 @@ export default function OverviewPage() {
                     <td className="price-num" style={{ color: "var(--parchment)" }}>
                       {t.sellPrice.toLocaleString()}
                     </td>
-                    <td
-                      className="price-num"
-                      style={{
-                        color: "var(--profit-light)",
-                        fontWeight: 500,
-                      }}
-                    >
+                    <td className="price-num" style={{ color: "var(--profit-light)", fontWeight: 500 }}>
                       +{t.profit.toLocaleString()}
                     </td>
                   </tr>
@@ -418,10 +459,7 @@ export default function OverviewPage() {
                         {row.mode}
                       </span>
                     </td>
-                    <td
-                      className="price-num"
-                      style={{ color: "var(--parchment)" }}
-                    >
+                    <td className="price-num" style={{ color: "var(--parchment)" }}>
                       {row.price.toLocaleString()}
                     </td>
                   </tr>
