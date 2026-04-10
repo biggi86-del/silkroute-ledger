@@ -172,7 +172,8 @@ export function isStale(timestamp: string, thresholdHours = 12): boolean {
 }
 
 export function formatAge(timestamp: string): string {
-  const mins = ageMinutes(timestamp);
+  const mins = Math.abs(ageMinutes(timestamp));
+  if (mins < 2) return "just now";
   if (mins < 60) return `${Math.round(mins)}m ago`;
   const hrs = mins / 60;
   if (hrs < 24) return `${hrs.toFixed(1)}h ago`;
