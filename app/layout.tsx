@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "SilkRoute Ledger",
@@ -31,6 +33,8 @@ export default function RootLayout({
         >
           ✦ SilkRoute Ledger — Ancient routes. Modern intelligence. ✦
         </footer>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
