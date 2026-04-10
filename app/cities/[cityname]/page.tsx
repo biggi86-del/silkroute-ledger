@@ -211,13 +211,14 @@ export default function CityPage({
                 <th>Store</th>
                 <th>Age</th>
                 <th>★</th>
+                <th>🪙</th>
               </tr>
             </thead>
             <tbody>
               {cityBuyItems.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     style={{
                       textAlign: "center",
                       color: "var(--text-dim)",
@@ -271,6 +272,16 @@ export default function CityPage({
                               }}
                             >
                               ★
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {entry.local && (
+                            <span
+                              title="Locally produced — sells for less in this city"
+                              style={{ fontSize: "0.85rem", cursor: "help" }}
+                            >
+                              🪙
                             </span>
                           )}
                         </td>

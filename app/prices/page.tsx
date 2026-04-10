@@ -21,6 +21,7 @@ interface Tooltip {
   price: number;
   timestamp: string;
   mode: string;
+  local: boolean;
 }
 
 function formatAge(ts: string) {
@@ -257,22 +258,33 @@ export default function PricesPage() {
                           price: entry.price,
                           timestamp: entry.timestamp,
                           mode: modeFilter,
+                          local: entry.local ?? false,
                         });
                       }}
                       onMouseLeave={() => setTooltip(null)}
                     >
                       {entry ? (
-                        <span
-                          style={{
-                            color:
-                              showBorder && isCheapest
-                                ? "var(--profit-light)"
-                                : showBorder && isMostExpensive
-                                ? "var(--loss-light)"
-                                : "var(--parchment)",
-                          }}
-                        >
-                          {entry.price.toLocaleString()}
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                          <span
+                            style={{
+                              color:
+                                showBorder && isCheapest
+                                  ? "var(--profit-light)"
+                                  : showBorder && isMostExpensive
+                                  ? "var(--loss-light)"
+                                  : "var(--parchment)",
+                            }}
+                          >
+                            {entry.price.toLocaleString()}
+                          </span>
+                          {entry.local && (
+                            <span
+                              title="Locally produced in this city"
+                              style={{ fontSize: "0.7rem", cursor: "help", lineHeight: 1 }}
+                            >
+                              🪙
+                            </span>
+                          )}
                         </span>
                       ) : (
                         <span style={{ color: "var(--text-dim)" }}>—</span>
@@ -324,6 +336,11 @@ export default function PricesPage() {
               </strong>
             </div>
             <div>Recorded: {formatAge(tooltip.timestamp)}</div>
+            {tooltip.local && (
+              <div style={{ marginTop: "0.3rem", color: "var(--gold-dim)", fontStyle: "italic" }}>
+                🪙 Locally produced here
+              </div>
+            )}
           </div>
         </div>
       )}

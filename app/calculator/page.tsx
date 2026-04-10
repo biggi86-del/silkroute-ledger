@@ -45,19 +45,22 @@ export default function CalculatorPage() {
         const sellPrice = sellEntry?.price ?? null;
         const profit =
           buyPrice !== null && sellPrice !== null ? sellPrice - buyPrice : null;
-        return { item, buyPrice, sellPrice, profit, buyEntry, sellEntry };
+        const isLocalSell = sellEntry?.local === true;
+        return { item, buyPrice, sellPrice, profit, buyEntry, sellEntry, isLocalSell };
       })
       .filter((r) => r.buyPrice !== null || r.sellPrice !== null)
       .sort((a, b) => {
         if (a.profit === null && b.profit === null) return 0;
         if (a.profit === null) return 1;
         if (b.profit === null) return -1;
+        // Deprioritise locally-produced sell city items — profit is overstated
+        if (a.isLocalSell !== b.isLocalSell) return a.isLocalSell ? 1 : -1;
         return b.profit - a.profit;
       });
   }, [data, buyCity, sellCity]);
 
   const bestTrade = useMemo(
-    () => rows.find((r) => r.profit !== null && r.profit > 0) ?? null,
+    () => rows.find((r) => r.profit !== null && r.profit > 0 && !r.isLocalSell) ?? null,
     [rows]
   );
 
@@ -259,13 +262,14 @@ export default function CalculatorPage() {
                 <th>Buy @ {sellCity || "—"}</th>
                 <th>Profit / Unit</th>
                 <th>Direction</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     style={{
                       textAlign: "center",
                       color: "var(--text-dim)",
@@ -286,8 +290,9 @@ export default function CalculatorPage() {
                     <tr
                       key={i}
                       className={
-                        hasProfit ? "row-profit" : hasLoss ? "row-loss" : ""
+                        row.isLocalSell ? "" : hasProfit ? "row-profit" : hasLoss ? "row-loss" : ""
                       }
+                      style={row.isLocalSell ? { opacity: 0.75 } : undefined}
                     >
                       <td style={{ color: "var(--parchment)", fontWeight: 500 }}>
                         {row.item}
@@ -334,6 +339,23 @@ export default function CalculatorPage() {
                         ) : (
                           <span style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}>
                             —
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {row.isLocalSell && (
+                          <span
+                            title="Locally produced — sells for less here. Estimated profit may be overstated."
+                            style={{
+                              cursor: "help",
+                              fontSize: "0.85rem",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "0.3rem",
+                              color: "var(--gold)",
+                            }}
+                          >
+                            ⚠️ <span style={{ fontSize: "0.68rem", color: "var(--text-dim)" }}>local</span>
                           </span>
                         )}
                       </td>

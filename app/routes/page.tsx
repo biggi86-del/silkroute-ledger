@@ -234,13 +234,14 @@ export default function RoutesPage() {
                 </th>
                 <th>Data Age</th>
                 <th>Status</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     style={{
                       textAlign: "center",
                       color: "var(--text-dim)",
@@ -253,7 +254,7 @@ export default function RoutesPage() {
                 </tr>
               ) : (
                 filtered.map((t, i) => (
-                  <tr key={i}>
+                  <tr key={i} style={t.isLocalSell ? { opacity: 0.78 } : undefined}>
                     <td style={{ color: "var(--parchment)", fontWeight: 500 }}>
                       {t.itemName}
                     </td>
@@ -300,6 +301,21 @@ export default function RoutesPage() {
                           }}
                         >
                           ✓ fresh
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      {t.isLocalSell && (
+                        <span
+                          title="Locally produced in destination — actual sell price will be lower than estimated"
+                          style={{
+                            cursor: "help",
+                            fontSize: "0.82rem",
+                            color: "var(--gold)",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          ⚠️ <span style={{ fontSize: "0.68rem", color: "var(--text-dim)" }}>local produce</span>
                         </span>
                       )}
                     </td>

@@ -51,7 +51,7 @@ function parseRows(rawValues: unknown[][]): RawRow[] {
 
   const rows: RawRow[] = [];
   for (const row of dataRows) {
-    const [timestamp, city, store, mode, itemName, priceRaw] = row as string[];
+    const [timestamp, city, store, mode, itemName, priceRaw, localRaw] = row as string[];
     if (!timestamp || !city || !store || !mode || !itemName || !priceRaw) continue;
 
     const price = parseFloat(String(priceRaw).replace(/[^0-9.]/g, ""));
@@ -60,6 +60,8 @@ function parseRows(rawValues: unknown[][]): RawRow[] {
     const modeClean = String(mode).trim();
     if (modeClean !== "Buy" && modeClean !== "Sell") continue;
 
+    const local = String(localRaw ?? "").trim().toLowerCase() === "yes";
+
     rows.push({
       timestamp: sanitize(String(timestamp)),
       city: sanitize(String(city)),
@@ -67,6 +69,7 @@ function parseRows(rawValues: unknown[][]): RawRow[] {
       mode: modeClean as "Buy" | "Sell",
       itemName: sanitize(String(itemName)),
       price,
+      local,
     });
   }
   return rows;
@@ -95,14 +98,14 @@ export async function fetchAllRows(): Promise<RawRow[]> {
     return [];
   }
 
-  // Step 2: fetch A:F from every tab in parallel and merge all rows.
+  // Step 2: fetch A:G from every tab in parallel and merge all rows.
   const allRawValues: unknown[][] = [];
   await Promise.all(
     tabNames.map(async (tab) => {
       try {
         const response = await sheets.spreadsheets.values.get({
           spreadsheetId: sheetId,
-          range: `'${tab}'!A:F`,
+          range: `'${tab}'!A:G`,
         });
         const vals = response.data.values ?? [];
         allRawValues.push(...vals);

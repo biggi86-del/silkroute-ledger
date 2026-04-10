@@ -5,6 +5,7 @@ export interface RawRow {
   mode: "Buy" | "Sell";
   itemName: string;
   price: number;
+  local: boolean; // column G — "Yes" = locally produced in this city
 }
 
 export interface PriceEntry {
@@ -14,6 +15,7 @@ export interface PriceEntry {
   mode: "Buy" | "Sell";
   itemName: string;
   price: number;
+  local: boolean;
 }
 
 // Keyed by itemName → city → mode → latest PriceEntry
@@ -36,6 +38,7 @@ export interface TradeOpportunity {
   buyTimestamp: string;
   sellTimestamp: string;
   isStale: boolean;
+  isLocalSell: boolean; // item is locally produced in the sell city — actual profit may be lower
 }
 
 export interface CityFreshness {

@@ -30,6 +30,10 @@ export function computeTradeOpportunities(priceMap: PriceMap): TradeOpportunity[
         const stale =
           isStale(buyEntry.timestamp) || isStale(sellEntry.timestamp);
 
+        // isLocalSell: item is locally produced in the destination city.
+        // Locally produced items sell for less, so estimated profit is overstated.
+        const isLocalSell = sellEntry.local === true;
+
         opportunities.push({
           itemName,
           buyCity,
@@ -40,6 +44,7 @@ export function computeTradeOpportunities(priceMap: PriceMap): TradeOpportunity[
           buyTimestamp: buyEntry.timestamp,
           sellTimestamp: sellEntry.timestamp,
           isStale: stale,
+          isLocalSell,
         });
       }
     }
@@ -55,5 +60,9 @@ export function computeTradeOpportunities(priceMap: PriceMap): TradeOpportunity[
     }
   }
 
-  return Array.from(best.values()).sort((a, b) => b.profit - a.profit);
+  return Array.from(best.values()).sort((a, b) => {
+    // Local-sell routes are deprioritised — sort them below non-local at same profit level
+    if (a.isLocalSell !== b.isLocalSell) return a.isLocalSell ? 1 : -1;
+    return b.profit - a.profit;
+  });
 }
