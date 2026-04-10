@@ -6,10 +6,13 @@ import type { RawRow, PriceEntry, PriceMap } from "@/types";
 // Sanitisation — strip HTML tags only. Do NOT HTML-encode entities —
 // React renders JSX text as plain text, not HTML, so encoding apostrophes
 // as &#39; causes them to display literally as "&#39;" in the browser.
+// Also fix a common scanner artifact: "Khashayar 's" → "Khashayar's"
 // ---------------------------------------------------------------------------
 function sanitize(value: string): string {
   return value
-    .replace(/<[^>]*>/g, "") // strip HTML tags
+    .replace(/<[^>]*>/g, "")   // strip HTML tags
+    .replace(/ '/g, "'")        // fix scanner artifact: "name 's" → "name's"
+    .replace(/ "/g, '"')        // same for double quotes
     .trim();
 }
 
