@@ -5,8 +5,46 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
-  title: "SilkRoute Ledger",
-  description: "Ancient routes. Modern intelligence.",
+  metadataBase: new URL("https://www.silkrouteledger.com"),
+  title: {
+    default: "SilkRoute Ledger — Silk Road Trading Intelligence",
+    template: "%s | SilkRoute Ledger",
+  },
+  description:
+    "Live trading intelligence dashboard for Silk Road merchants. Track prices across Tyre, Damascus, Palmyra, Ctesiphon and Ecbatana. Find the most profitable trade routes in real time.",
+  keywords: [
+    "Silk Road trading",
+    "trade routes",
+    "market prices",
+    "trading dashboard",
+    "merchant intelligence",
+    "Tyre",
+    "Damascus",
+    "Palmyra",
+    "Ctesiphon",
+    "Ecbatana",
+  ],
+  openGraph: {
+    type: "website",
+    url: "https://www.silkrouteledger.com",
+    title: "SilkRoute Ledger — Silk Road Trading Intelligence",
+    description:
+      "Live trading intelligence dashboard. Find profitable trade routes across ancient cities in real time.",
+    siteName: "SilkRoute Ledger",
+  },
+  twitter: {
+    card: "summary",
+    title: "SilkRoute Ledger",
+    description: "Live Silk Road trading intelligence — prices, routes, profit margins.",
+  },
+  alternates: {
+    canonical: "https://www.silkrouteledger.com",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
   icons: { icon: "/favicon.ico" },
 };
 
