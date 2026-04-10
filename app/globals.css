@@ -1,0 +1,217 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+:root {
+  --leather: #1C1410;
+  --leather-light: #2A1E16;
+  --leather-mid: #231A13;
+  --parchment: #E8D5B5;
+  --parchment-dark: #D4BC94;
+  --parchment-muted: #C4A97A;
+  --gold: #C9A24A;
+  --gold-light: #D4B56A;
+  --gold-dim: #8A6F32;
+  --ink: #2C1810;
+  --ink-light: #3D2518;
+  --profit: #4A7C59;
+  --profit-light: #5A9A6E;
+  --loss: #8B2E2E;
+  --loss-light: #A83535;
+  --text-primary: #E8D5B5;
+  --text-muted: #C4A97A;
+  --text-dim: #8A7060;
+  --border: #3D2A1A;
+  --border-gold: rgba(201,162,74,0.3);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  background-color: var(--leather);
+  color: var(--parchment);
+}
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background-color: var(--leather);
+  color: var(--parchment);
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Cormorant Garamond', serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--leather); }
+::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+/* Utility classes */
+.font-serif { font-family: 'Cormorant Garamond', serif; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+
+.card {
+  background: var(--leather-light);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.card-parchment {
+  background: var(--parchment);
+  border: 1px solid var(--parchment-dark);
+  border-radius: 4px;
+  color: var(--ink);
+}
+
+.gold-text { color: var(--gold); }
+.muted-text { color: var(--text-muted); }
+.dim-text { color: var(--text-dim); }
+
+.profit-text { color: var(--profit-light); }
+.loss-text { color: var(--loss-light); }
+
+/* Table styles */
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.ledger-table th {
+  background: var(--leather-mid);
+  color: var(--gold);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border-gold);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.ledger-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(61,42,26,0.5);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+}
+
+.ledger-table tr:hover td {
+  background: rgba(201,162,74,0.04);
+}
+
+/* Gold divider */
+.gold-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+  margin: 1rem 0;
+}
+
+/* Freshness dot */
+.freshness-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.fresh { background: var(--profit); }
+.aging { background: var(--gold); }
+.stale { background: var(--loss); }
+
+/* Number emphasis */
+.price-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9em;
+  letter-spacing: -0.02em;
+}
+
+/* Select / input */
+.ledger-select, .ledger-input {
+  background: var(--leather-mid);
+  border: 1px solid var(--border-gold);
+  color: var(--parchment);
+  border-radius: 3px;
+  padding: 0.45rem 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.ledger-select:focus, .ledger-input:focus {
+  border-color: var(--gold);
+}
+
+.ledger-select option {
+  background: var(--leather-mid);
+  color: var(--parchment);
+}
+
+/* Ornament */
+.ornament {
+  color: var(--gold-dim);
+  font-size: 1.2em;
+  user-select: none;
+}
+
+/* Stale warning */
+.stale-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(139,46,46,0.15);
+  border: 1px solid rgba(139,46,46,0.4);
+  color: var(--loss-light);
+  padding: 0.1rem 0.4rem;
+  border-radius: 2px;
+  font-size: 0.7rem;
+}
+
+/* Nav link active */
+.nav-link {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 0.25rem 0.5rem;
+  transition: color 0.2s;
+  letter-spacing: 0.05em;
+}
+.nav-link:hover { color: var(--gold); }
+.nav-link.active { color: var(--gold); border-bottom: 1px solid var(--gold); }
+
+/* Tooltip */
+.tooltip-parchment {
+  background: var(--parchment);
+  color: var(--ink);
+  border: 1px solid var(--parchment-dark);
+  border-radius: 3px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.78rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+/* Profit row highlights */
+.row-profit td { background: rgba(74,124,89,0.08) !important; }
+.row-loss td { background: rgba(139,46,46,0.08) !important; }
+
+/* Sticky column */
+.sticky-col {
+  position: sticky;
+  left: 0;
+  background: var(--leather-light);
+  z-index: 1;
+}
+
+.sticky-col-header {
+  position: sticky;
+  left: 0;
+  background: var(--leather-mid);
+  z-index: 2;
+}
