@@ -1,17 +1,20 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
+export const viewport: Viewport = {
+  themeColor: "#1C1410",
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.silkrouteledger.com"),
   title: {
-    default: "SilkRoute Ledger — Silk Road Trading Intelligence",
+    default: "SilkRoute Ledger",
     template: "%s | SilkRoute Ledger",
   },
-  description:
-    "Live trading intelligence dashboard for Silk Road merchants. Track prices across Tyre, Damascus, Palmyra, Ctesiphon and Ecbatana. Find the most profitable trade routes in real time.",
+  description: "Ancient routes. Modern intelligence.",
   keywords: [
     "Silk Road trading",
     "trade routes",
@@ -45,7 +48,6 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  icons: { icon: "/favicon.ico" },
 };
 
 export default function RootLayout({
