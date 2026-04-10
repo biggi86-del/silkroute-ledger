@@ -158,8 +158,23 @@ export function buildPriceMap(entries: PriceEntry[]): PriceMap {
   return map;
 }
 
+// Preferred display order for cities — west to east along the Silk Road.
+// Any city not listed here is appended alphabetically after these.
+const CITY_ORDER = ["Tyre", "Damascus", "Palmyra", "Ctesiphon", "Ecbatana"];
+
 export function getAllCities(entries: PriceEntry[]): string[] {
-  return Array.from(new Set(entries.map((e) => e.city))).sort();
+  const found = Array.from(new Set(entries.map((e) => e.city)));
+  return found.sort((a, b) => {
+    const ai = CITY_ORDER.indexOf(a);
+    const bi = CITY_ORDER.indexOf(b);
+    // Both known → use preferred order
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    // One known, one unknown → known comes first
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    // Both unknown → alphabetical
+    return a.localeCompare(b);
+  });
 }
 
 export function getAllItems(entries: PriceEntry[]): string[] {
