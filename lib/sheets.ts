@@ -3,18 +3,13 @@ import { google } from "googleapis";
 import type { RawRow, PriceEntry, PriceMap } from "@/types";
 
 // ---------------------------------------------------------------------------
-// Sanitisation — strip HTML tags and escape dangerous characters from any
-// string coming out of the Google Sheet. React escapes JSX text by default,
-// but this defends against future misuse of raw values.
+// Sanitisation — strip HTML tags only. Do NOT HTML-encode entities —
+// React renders JSX text as plain text, not HTML, so encoding apostrophes
+// as &#39; causes them to display literally as "&#39;" in the browser.
 // ---------------------------------------------------------------------------
 function sanitize(value: string): string {
   return value
     .replace(/<[^>]*>/g, "") // strip HTML tags
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
     .trim();
 }
 
@@ -58,7 +53,10 @@ function parseRows(rawValues: unknown[][]): RawRow[] {
   const rows: RawRow[] = [];
   for (const row of dataRows) {
     const [timestamp, city, store, mode, itemName, priceRaw, localRaw] = row as string[];
-    if (!timestamp || !city || !store || !mode || !itemName || !priceRaw) continue;
+
+    // store (col C) is optional — Sell entries are often saved without a store name.
+    // Require: timestamp, city, mode, itemName, price.
+    if (!timestamp || !city || !mode || !itemName || !priceRaw) continue;
 
     const price = parseFloat(String(priceRaw).replace(/[^0-9.]/g, ""));
     if (isNaN(price)) continue;
@@ -68,12 +66,15 @@ function parseRows(rawValues: unknown[][]): RawRow[] {
 
     const local = String(localRaw ?? "").trim().toLowerCase() === "yes";
 
+    // Default missing store names to "Market" so they display gracefully
+    const storeName = store && String(store).trim() ? sanitize(String(store)) : "Market";
+
     rows.push({
       timestamp: sanitize(String(timestamp)),
-      city: sanitize(String(city)),
-      store: sanitize(String(store)),
-      mode: modeClean as "Buy" | "Sell",
-      itemName: sanitize(String(itemName)),
+      city:      sanitize(String(city)),
+      store:     storeName,
+      mode:      modeClean as "Buy" | "Sell",
+      itemName:  sanitize(String(itemName)),
       price,
       local,
     });
