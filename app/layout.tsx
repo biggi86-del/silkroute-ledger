@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     default: "SilkRoute Ledger",
     template: "%s | SilkRoute Ledger",
   },
-  description: "Ancient routes. Modern intelligence.",
+  description: "A live price tracker for the Roblox game Silk Road: Trading Simulator. See current prices across Tyre, Damascus, Palmyra, Ctesiphon and Ecbatana to find the best trades.",
   keywords: [
     "Silk Road trading",
     "trade routes",
@@ -32,13 +32,13 @@ export const metadata: Metadata = {
     url: "https://www.silkrouteledger.com",
     title: "SilkRoute Ledger — Silk Road Trading Intelligence",
     description:
-      "Live trading intelligence dashboard. Find profitable trade routes across ancient cities in real time.",
+      "A live price tracker for the Roblox game Silk Road: Trading Simulator. See current prices across Tyre, Damascus, Palmyra, Ctesiphon and Ecbatana to find the best trades.",
     siteName: "SilkRoute Ledger",
   },
   twitter: {
     card: "summary",
     title: "SilkRoute Ledger",
-    description: "Live Silk Road trading intelligence — prices, routes, profit margins.",
+    description: "A live price tracker for the Roblox game Silk Road: Trading Simulator. See current prices across Tyre, Damascus, Palmyra, Ctesiphon and Ecbatana to find the best trades.",
   },
   alternates: {
     canonical: "https://www.silkrouteledger.com",
