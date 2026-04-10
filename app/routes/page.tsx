@@ -232,6 +232,7 @@ export default function RoutesPage() {
                 >
                   Profit / Unit <SortIcon k="profit" />
                 </th>
+                <th>Type</th>
                 <th>Data Age</th>
                 <th>Status</th>
                 <th>Notes</th>
@@ -240,15 +241,7 @@ export default function RoutesPage() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={9}
-                    style={{
-                      textAlign: "center",
-                      color: "var(--text-dim)",
-                      padding: "2rem",
-                      fontFamily: "'Cormorant Garamond', serif",
-                    }}
-                  >
+                  <td colSpan={10} style={{ textAlign: "center", color: "var(--text-dim)", padding: "2rem", fontFamily: "'Cormorant Garamond', serif" }}>
                     No routes found matching your filters.
                   </td>
                 </tr>
@@ -275,12 +268,19 @@ export default function RoutesPage() {
                       </a>
                     </td>
                     <td className="price-num">{t.buyPrice.toLocaleString()}</td>
-                    <td className="price-num">{t.sellPrice.toLocaleString()}</td>
-                    <td
-                      className="price-num"
-                      style={{ color: "var(--profit-light)", fontWeight: 600 }}
-                    >
+                    <td className="price-num" style={{ color: t.profitConfirmed ? "var(--gold)" : undefined }}>
+                      {t.sellPrice.toLocaleString()}
+                    </td>
+                    <td className="price-num" style={{ color: "var(--profit-light)", fontWeight: 600 }}>
                       +{t.profit.toLocaleString()}
+                      {!t.profitConfirmed && <span style={{ fontSize: "0.6rem", color: "var(--text-dim)", marginLeft: "0.2rem" }}>est.</span>}
+                    </td>
+                    <td>
+                      {t.profitConfirmed ? (
+                        <span style={{ fontSize: "0.7rem", color: "var(--profit-light)", whiteSpace: "nowrap" }}>✓ confirmed</span>
+                      ) : (
+                        <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", whiteSpace: "nowrap" }}>~ estimated</span>
+                      )}
                     </td>
                     <td
                       style={{

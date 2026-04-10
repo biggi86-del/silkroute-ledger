@@ -33,12 +33,13 @@ export interface TradeOpportunity {
   buyCity: string;
   sellCity: string;
   buyPrice: number;
-  sellPrice: number; // actually the Buy price in the "sell" city
+  sellPrice: number;       // actual Sell price if confirmed, else Buy price in destination
   profit: number;
   buyTimestamp: string;
   sellTimestamp: string;
   isStale: boolean;
-  isLocalSell: boolean; // item is locally produced in the sell city — actual profit may be lower
+  isLocalSell: boolean;    // item is locally produced in the sell city
+  profitConfirmed: boolean; // true = real Sell data used; false = estimated from Buy prices
 }
 
 export interface CityFreshness {

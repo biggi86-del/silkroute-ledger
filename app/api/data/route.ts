@@ -76,6 +76,9 @@ export async function GET(request: Request) {
       .slice(0, 20)
       .map((r) => ({ ...r, ageLabel: formatAge(r.timestamp) }));
 
+    const buyCount  = allRows.filter((r) => r.mode === "Buy").length;
+    const sellCount = allRows.filter((r) => r.mode === "Sell").length;
+
     return NextResponse.json(
       {
         stats,
@@ -86,7 +89,8 @@ export async function GET(request: Request) {
         items,
         recentActivity,
         latestEntries,
-        fetchedAt: new Date().toISOString(), // for "Last refreshed" display
+        fetchedAt: new Date().toISOString(),
+        modeCounts: { buy: buyCount, sell: sellCount }, // diagnostic
       },
       { headers }
     );
