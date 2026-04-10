@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { fetchAllRows, getLatestPrices, buildPriceMap, getAllCities, getAllItems, formatAge } from "@/lib/sheets";
 import { computeTradeOpportunities } from "@/lib/trades";
+import { apiGuard, buildCorsHeaders } from "@/lib/apiGuard";
 import type { CityFreshness, DashboardStats } from "@/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Security: rate limit + cross-origin check
+  const guard = apiGuard(request);
+  if (guard) return guard;
+
+  const corsHeaders = buildCorsHeaders(request);
+
   try {
     const allRows = await fetchAllRows();
     const latestEntries = getLatestPrices(allRows);
@@ -42,18 +49,23 @@ export async function GET() {
       .slice(0, 20)
       .map((r) => ({ ...r, ageLabel: formatAge(r.timestamp) }));
 
-    return NextResponse.json({
-      stats,
-      trades,
-      freshness,
-      priceMap,
-      cities,
-      items,
-      recentActivity,
-      latestEntries,
-    });
+    return NextResponse.json(
+      { stats, trades, freshness, priceMap, cities, items, recentActivity, latestEntries },
+      { headers: corsHeaders }
+    );
   } catch (err) {
     console.error("[/api/data]", err);
-    return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch data" },
+      { status: 500, headers: corsHeaders }
+    );
   }
+}
+
+// Handle preflight OPTIONS requests
+export async function OPTIONS(request: Request) {
+  return new Response(null, {
+    status: 204,
+    headers: buildCorsHeaders(request),
+  });
 }

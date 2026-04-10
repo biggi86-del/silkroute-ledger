@@ -1,5 +1,22 @@
+import "server-only";
 import { google } from "googleapis";
 import type { RawRow, PriceEntry, PriceMap } from "@/types";
+
+// ---------------------------------------------------------------------------
+// Sanitisation — strip HTML tags and escape dangerous characters from any
+// string coming out of the Google Sheet. React escapes JSX text by default,
+// but this defends against future misuse of raw values.
+// ---------------------------------------------------------------------------
+function sanitize(value: string): string {
+  return value
+    .replace(/<[^>]*>/g, "") // strip HTML tags
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .trim();
+}
 
 // ---------------------------------------------------------------------------
 // In-memory cache (60 s TTL)
@@ -60,11 +77,11 @@ export async function fetchAllRows(): Promise<RawRow[]> {
     if (modeClean !== "Buy" && modeClean !== "Sell") continue;
 
     rows.push({
-      timestamp: String(timestamp).trim(),
-      city: String(city).trim(),
-      store: String(store).trim(),
+      timestamp: sanitize(String(timestamp)),
+      city: sanitize(String(city)),
+      store: sanitize(String(store)),
       mode: modeClean as "Buy" | "Sell",
-      itemName: String(itemName).trim(),
+      itemName: sanitize(String(itemName)),
       price,
     });
   }
