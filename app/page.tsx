@@ -9,6 +9,7 @@ import LoadingSpinner, { SkeletonCard } from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import RefreshButton from "@/components/RefreshButton";
 import { useDataFetch } from "@/hooks/useDataFetch";
+import CityHoverCard from "@/components/CityHoverCard";
 import type { TradeOpportunity, ModifierMap, CityFreshness, PriceChange } from "@/types";
 
 interface ApiData {
@@ -240,14 +241,13 @@ function CityCard({ f, modifierMap }: { f: CityFreshness & { itemCount: number }
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.4rem" }}>
-        <Link href={`/cities/${f.city.toLowerCase()}`} style={{
-          fontFamily: "'Cormorant Garamond', serif", fontSize: "1rem",
-          fontWeight: 700, color: "var(--gold)", textDecoration: "none",
-          letterSpacing: "0.06em", textTransform: "uppercase",
-        }}>
-          {f.city}
-        </Link>
-        <span style={{
+        <CityHoverCard
+          city={f.city}
+          modifierMap={modifierMap}
+          freshness={f}
+          style={{ fontSize: "1rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}
+        />
+        <span className="freshness-dot" style={{
           width: 8, height: 8, borderRadius: "50%",
           background: color, flexShrink: 0, display: "inline-block",
         }} title={ageLabel(f.ageMinutes)} />

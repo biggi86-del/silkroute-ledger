@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { PageFade } from "@/components/motion";
 import PageWrapper from "@/components/PageWrapper";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
@@ -94,6 +95,7 @@ export default function CoveragePage() {
   const coveragePct = totalSlots > 0 ? ((filledSlots / totalSlots) * 100).toFixed(1) : "0";
 
   return (
+    <PageFade>
     <PageWrapper
       title="Coverage"
       subtitle={`${coveragePct}% of item × city combinations scanned — ${filledSlots} of ${totalSlots} slots filled`}
@@ -408,5 +410,6 @@ export default function CoveragePage() {
         ))}
       </div>
     </PageWrapper>
+    </PageFade>
   );
 }

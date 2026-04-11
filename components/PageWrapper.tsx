@@ -22,12 +22,12 @@ export default function PageWrapper({ title, subtitle, children, actions }: Prop
         <div>
           <h1
             style={{
-              fontFamily: "'Cormorant Garamond', serif",
+              fontFamily: "'Playfair Display', serif",
               fontSize: "2rem",
-              fontWeight: 600,
+              fontWeight: 800,
               color: "var(--gold)",
               margin: 0,
-              letterSpacing: "0.04em",
+              letterSpacing: "0.01em",
             }}
           >
             {title}
@@ -38,7 +38,8 @@ export default function PageWrapper({ title, subtitle, children, actions }: Prop
                 color: "var(--text-dim)",
                 fontSize: "0.8rem",
                 marginTop: "0.25rem",
-                letterSpacing: "0.05em",
+                fontFamily: "'Inter', sans-serif",
+                letterSpacing: "0.02em",
               }}
             >
               {subtitle}

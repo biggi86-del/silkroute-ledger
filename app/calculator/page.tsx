@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PageFade } from "@/components/motion";
 import PageWrapper from "@/components/PageWrapper";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
@@ -70,6 +71,7 @@ export default function CalculatorPage() {
   const { cities } = data;
 
   return (
+    <PageFade>
     <PageWrapper
       title="Trade Calculator"
       subtitle="Compare prices between cities — confirmed sell data preferred over estimates"
@@ -197,5 +199,6 @@ export default function CalculatorPage() {
         ✦ Confirmed (✓) = real Sell scan data. est. = estimated from Buy price. Adj. Profit includes city modifier bonuses.
       </div>
     </PageWrapper>
+    </PageFade>
   );
 }

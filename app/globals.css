@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -73,13 +73,18 @@ html {
 }
 
 body {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Inter', 'JetBrains Mono', sans-serif;
   background-color: var(--leather);
   color: var(--parchment);
   min-height: 100vh;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1, h2, h3 {
+  font-family: 'Playfair Display', serif;
+  letter-spacing: 0.02em;
+}
+
+h4, h5, h6 {
   font-family: 'Cormorant Garamond', serif;
 }
 
@@ -348,10 +353,10 @@ div[style*="var(--leather-light)"] {
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.025), 0 1px 0 rgba(201,162,74,0.08);
 }
 
-/* 4. Typography — heavier headings, stamped feel */
+/* 4. Typography — Playfair Display for headings */
 h1, h2, h3 {
-  letter-spacing: 0.04em;
-  font-weight: 600;
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
 }
 
 /* Section labels with gold divider extending right */
@@ -453,3 +458,77 @@ h1, h2, h3 {
 .city-card-homog    { border-left: 3px solid #7B6B9B !important; background-image: radial-gradient(ellipse at 0 50%, rgba(123,107,155,0.03), transparent 70%); }
 .city-card-conflict { border-left: 3px solid #8B2E2E !important; background-image: radial-gradient(ellipse at 0 50%, rgba(139,46,46,0.04), transparent 70%); }
 .city-card-default  { border-left: 3px solid var(--border) !important; }
+
+/* ── Extra class polish ───────────────────────────────────────────────── */
+
+/* Focus rings — gold, accessible */
+*:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Inter for UI labels */
+.font-ui { font-family: 'Inter', sans-serif; font-size: 0.8rem; }
+
+/* Ledger table label text */
+.ledger-table th {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.85rem;
+}
+
+/* Numbers: always mono */
+.price-num, td.price-num, span.price-num {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Better section label typography */
+.section-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+
+/* Smooth image renders */
+* { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* PageWrapper title override to Playfair */
+.page-title {
+  font-family: 'Playfair Display', serif !important;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+/* ── Mobile responsive tables ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Stack main padding tighter on mobile */
+  div[style*="padding: 2rem"] {
+    padding: 1rem !important;
+  }
+  /* Ensure tables scroll horizontally */
+  .ledger-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+  /* Sticky first column on mobile tables */
+  .ledger-table td:first-child,
+  .ledger-table th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--leather-light);
+  }
+  .ledger-table th:first-child {
+    background: var(--leather-mid);
+    z-index: 3;
+  }
+}
+
+/* ── Playfair Display in all page titles ──────────────────────────────── */
+.page-title, [style*="'Cormorant Garamond'"][style*="2rem"] {
+  font-family: 'Playfair Display', serif !important;
+}

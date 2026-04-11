@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { PageFade } from "@/components/motion";
 import PageWrapper from "@/components/PageWrapper";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
@@ -46,6 +47,7 @@ export default function HistoryPage() {
   if (loading) return <LoadingSpinner />;
 
   return (
+    <PageFade>
     <PageWrapper
       title="Price History"
       subtitle="Track how prices have changed across cities over time"
@@ -103,5 +105,6 @@ export default function HistoryPage() {
         </div>
       )}
     </PageWrapper>
+    </PageFade>
   );
 }

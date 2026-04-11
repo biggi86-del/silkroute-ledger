@@ -1,6 +1,7 @@
 "use client";
 
 import PageWrapper from "@/components/PageWrapper";
+import { PageFade } from "@/components/motion";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import RefreshButton from "@/components/RefreshButton";
@@ -208,6 +209,7 @@ export default function ModifiersPage() {
   const economicCount = allMods.filter((m) => m.type === "economic" && m.pct > 0).length;
 
   return (
+    <PageFade>
     <PageWrapper
       title="City Modifiers"
       subtitle={`${economicCount} active economic modifiers across ${cities.length} cities`}
@@ -278,5 +280,6 @@ export default function ModifiersPage() {
         ✦ Modifier data is read from the "City Modifiers" tab in the Google Sheet. Refreshes every 60 seconds.
       </div>
     </PageWrapper>
+    </PageFade>
   );
 }
