@@ -21,7 +21,7 @@ const CATEGORY_ITEMS: Record<string, string[]> = {
 const CATEGORY_KEYWORDS: Array<[string, string]> = [
   ["tools and weapons",           "tools"],
   ["weapons and tools",           "tools"],
-  ["weapons and metal",           "weapons"],   // also adds metal below
+  ["weapons and metal",           "weapons"],
   ["metal and weapons",           "metal"],
   ["tools & weapons",             "tools"],
   ["weapons & tools",             "tools"],
@@ -30,7 +30,9 @@ const CATEGORY_KEYWORDS: Array<[string, string]> = [
   ["trade goods",                 "trade goods"],
   ["food items",                  "food"],
   ["food goods",                  "food"],
-  ["foreign cultures",            "all"],    // bonus/penalty for all traders
+  ["foreign cultures",            "all"],
+  ["foreign traders",             "all"],
+  ["foreign culture",             "all"],    // singular variant
   ["all goods",                   "all"],
   ["all items",                   "all"],
   ["everything",                  "all"],
@@ -78,18 +80,18 @@ export function getModifierType(name: string): "cultural" | "language" | "econom
 function cleanEffectText(raw: string): string {
   let t = raw.trim();
 
-  // 1. Strip leading single digit(s) + space: "3 This city..." → "This city..."
+  // 1. Strip leading digit(s) + space: "3 This city..." → "This city..."
   t = t.replace(/^\d+\s+/, "");
 
-  // 2. Fix trailing " ' s" artifact: "Homogenous City ' s" → "Homogenous City"
-  t = t.replace(/\s+'\s*s?\s*$/i, "");
+  // 2. Fix trailing " ' s" or " 's" artifact (ASCII and Unicode apostrophes)
+  //    "Homogenous City ' s" → "Homogenous City"
+  t = t.replace(/\s+['\u2018\u2019\u02BC]\s*s?\s*$/i, "");
 
   // 3. Strip trailing isolated digits: "Weapons 9" → "Weapons"
   t = t.replace(/\s+\d+\s*$/, "");
 
   // 4. Strip trailing OCR noise after last meaningful sentence marker
-  //    Only strip if trailing content is short (< 20 chars) and contains no digits or %
-  //    Markers: ) % . ! ?
+  //    Only strip if trailing content is short (< 20 chars) and has no digits/%
   const markers = [")", "%", ".", "!", "?"];
   let lastMarkerPos = -1;
   for (const m of markers) {
@@ -98,11 +100,7 @@ function cleanEffectText(raw: string): string {
   }
   if (lastMarkerPos > 0 && lastMarkerPos < t.length - 1) {
     const trailing = t.slice(lastMarkerPos + 1).trim();
-    const isShortNoise =
-      trailing.length < 20 &&
-      !/\d/.test(trailing) &&     // no digits in trailing
-      !/%/.test(trailing);         // no % in trailing
-    if (isShortNoise) {
+    if (trailing.length < 20 && !/\d/.test(trailing) && !/%/.test(trailing)) {
       t = t.slice(0, lastMarkerPos + 1).trim();
     }
   }
@@ -154,6 +152,16 @@ function parseEffectText(
   // 1. Extract percentage — including "(estimate X%)" format
   const pctMatch = lower.match(/(?:estimate\s*[+-]?\s*)?(\d+(?:\.\d+)?)\s*%/);
   let pct = pctMatch ? parseFloat(pctMatch[1]) : 0;
+
+  // Sanity cap: OCR commonly prepends a stray digit, turning "15%" into "115%"
+  // If pct > 100, strip the leading digit and retry
+  if (pct > 100) {
+    const s = String(Math.round(pct));
+    const stripped = parseInt(s.slice(1), 10);
+    pct = (stripped >= 1 && stripped <= 50) ? stripped : 20;
+  }
+  // Soft cap: anything above 50% is almost certainly an OCR error
+  if (pct > 50) pct = Math.round(pct / 10) * 5 <= 50 ? Math.round(pct / 10) * 5 : 20;
 
   // Fallback for vague qualifiers when no explicit %
   if (!pct) {
@@ -333,11 +341,15 @@ export async function fetchModifiers(): Promise<ModifierMap> {
   const modMap: ModifierMap = {};
 
   for (const row of dataRows) {
-    const city      = String(row[cityCol]  ?? "").trim();
+    // Fuzzy city match — OCR may append digits or punctuation to city names
+    const rawCity = String(row[cityCol] ?? "").trim().replace(/[\d\s'.,:;!?]+$/, "").trim();
+    const city = Array.from(KNOWN_CITIES).find(
+      (c) => c.toLowerCase() === rawCity.toLowerCase() || rawCity.startsWith(c)
+    ) ?? "";
+    if (!city) continue;
+
     const rawName   = nameCol >= 0 ? String(row[nameCol]  ?? "").trim() : "";
     const rawEffect = String(row[effectCol] ?? "").trim();
-
-    if (!city || !KNOWN_CITIES.has(city)) continue;
 
     // Clean OCR noise from the effect text
     const effectText = cleanEffectText(rawEffect || rawName);
