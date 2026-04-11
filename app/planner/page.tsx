@@ -18,7 +18,7 @@ interface ApiData {
 }
 
 // ---------------------------------------------------------------------------
-// Algorithm (unchanged)
+// Algorithm
 // ---------------------------------------------------------------------------
 function permutations<T>(arr: T[]): T[][] {
   if (arr.length <= 1) return [arr];
@@ -30,13 +30,34 @@ function permutations<T>(arr: T[]): T[][] {
   return result;
 }
 
+/**
+ * Distribute totalSlots across items using profit-weighted allocation.
+ * Highest-profit item gets the most slots; remainder goes to top items.
+ *
+ * Example (verified against spec): Sea Salt +25, Olive Oil +12, 21 total slots
+ *   Sea Salt:  floor(25/37 × 21) = 14 + 1 remainder = 15 slots
+ *   Olive Oil: floor(12/37 × 21) = 6 slots
+ *   Total: 21/21 ✓
+ */
+function allocateSlots(items: PlannerItem[], totalSlots: number): number[] {
+  if (items.length === 0) return [];
+  const totalProfit = items.reduce((s, i) => s + Math.max(i.profit, 1), 0);
+  const initial = items.map((item) =>
+    Math.floor((Math.max(item.profit, 1) / totalProfit) * totalSlots)
+  );
+  const remainder = totalSlots - initial.reduce((s, n) => s + n, 0);
+  // Distribute remainder one slot at a time to highest-profit items (already sorted)
+  return initial.map((n, i) => n + (i < remainder ? 1 : 0));
+}
+
 function getBestItemsForLeg(
   fromCity: string,
   toCity: string,
   priceMap: PriceMap,
   modifierMap: ModifierMap,
   items: string[],
-  cargoSlots: number
+  itemTypes: number,  // max distinct item types
+  totalSlots: number  // total cargo capacity
 ): PlannerItem[] {
   const candidates: PlannerItem[] = [];
   for (const itemName of items) {
@@ -59,9 +80,21 @@ function getBestItemsForLeg(
       profitConfirmed: !!actualSell,
       isLocal:         sellEntry.local,
       modifierLabel:   label,
+      slots:           0,           // filled below
+      quantityProfit:  0,           // filled below
     });
   }
-  return candidates.sort((a, b) => b.profit - a.profit).slice(0, cargoSlots);
+
+  // Pick top itemTypes items by per-unit profit
+  const top = candidates.sort((a, b) => b.profit - a.profit).slice(0, itemTypes);
+
+  // Allocate totalSlots across the selected items (profit-weighted)
+  const slotAllocation = allocateSlots(top, totalSlots);
+  return top.map((item, i) => ({
+    ...item,
+    slots:          slotAllocation[i],
+    quantityProfit: item.profit * slotAllocation[i],
+  }));
 }
 
 function computeRoutes(
@@ -69,7 +102,8 @@ function computeRoutes(
   items: string[],
   priceMap: PriceMap,
   modifierMap: ModifierMap,
-  cargoSlots: number
+  itemTypes: number,
+  totalSlots: number
 ): PlannerRoute[] {
   if (selectedCities.length < 2) return [];
   const routes: PlannerRoute[] = [];
@@ -81,12 +115,18 @@ function computeRoutes(
     for (let i = 0; i < cityOrder.length; i++) {
       const fromCity = cityOrder[i];
       const toCity   = cityOrder[(i + 1) % cityOrder.length];
-      const buy  = getBestItemsForLeg(fromCity, toCity, priceMap, modifierMap, items, cargoSlots);
       const prevFrom = cityOrder[(i - 1 + cityOrder.length) % cityOrder.length];
-      const sell = getBestItemsForLeg(prevFrom, fromCity, priceMap, modifierMap, items, cargoSlots);
-      const legProfit = sell.reduce((s, item) => s + item.profit, 0);
+
+      const buy  = getBestItemsForLeg(fromCity, toCity, priceMap, modifierMap, items, itemTypes, totalSlots);
+      const sell = getBestItemsForLeg(prevFrom, fromCity, priceMap, modifierMap, items, itemTypes, totalSlots);
+
+      // Quantity-adjusted profit: sum of (profit × slots) for sold items
+      const legProfit = sell.reduce((s, item) => s + item.quantityProfit, 0);
       totalProfit += legProfit;
-      legs.push({ fromCity, toCity, buy, sell, legProfit });
+
+      const slotsUsed = buy.reduce((s, item) => s + item.slots, 0);
+
+      legs.push({ fromCity, toCity, buy, sell, legProfit, slotsUsed, totalSlots });
     }
     routes.push({ cities: cityOrder, legs, totalProfit });
   }
@@ -99,7 +139,8 @@ function computeRoutes(
 
 /** One-line route summary bar at the top of each route card */
 function RouteSummaryBar({ route, rank }: { route: PlannerRoute; rank: number }) {
-  const totalItems = route.legs.reduce((s, l) => s + l.sell.length + l.buy.length, 0);
+  const totalSlots  = route.legs[0]?.totalSlots ?? 0;
+  const totalTrades = route.legs.reduce((s, l) => s + l.sell.reduce((ss, i) => ss + i.slots, 0), 0);
   const isTop = rank === 0;
   return (
     <div style={{
@@ -140,7 +181,7 @@ function RouteSummaryBar({ route, rank }: { route: PlannerRoute; rank: number })
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: "0.65rem", color: "var(--text-dim)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Trades</div>
-          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "1.1rem", color: "var(--parchment)" }}>{totalItems}</div>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "1.1rem", color: "var(--parchment)" }}>{totalTrades} units</div>
         </div>
       </div>
     </div>
@@ -149,7 +190,7 @@ function RouteSummaryBar({ route, rank }: { route: PlannerRoute; rank: number })
 
 /** Left half of a stop card — SELL HERE */
 function SellPanel({ items, city }: { items: PlannerItem[]; city: string }) {
-  const totalEarned = items.reduce((s, i) => s + i.profit, 0);
+  const totalEarned = items.reduce((s, i) => s + i.quantityProfit, 0);
   return (
     <div style={{
       flex: 1,
@@ -190,19 +231,8 @@ function SellPanel({ items, city }: { items: PlannerItem[]; city: string }) {
               </span>
             )}
           </span>
-          <span style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: "0.8rem",
-            color: "var(--profit-light)",
-            fontWeight: 600,
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-          }}>
-            +{item.profit}
-            {/* Only show est. for non-confirmed prices */}
-            {!item.profitConfirmed && (
-              <span style={{ fontSize: "0.6rem", color: "var(--text-dim)", marginLeft: "0.2rem" }}>est.</span>
-            )}
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.78rem", color: "var(--profit-light)", fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>
+            ×{item.slots} · +{item.profit}{!item.profitConfirmed && <span style={{ fontSize: "0.6rem", color: "var(--text-dim)" }}> est.</span>} = <strong>+{item.quantityProfit.toLocaleString()}</strong>
           </span>
         </div>
       ))}
@@ -210,9 +240,13 @@ function SellPanel({ items, city }: { items: PlannerItem[]; city: string }) {
   );
 }
 
-/** Right half of a stop card — BUY HERE */
-function BuyPanel({ items, nextCity }: { items: PlannerItem[]; nextCity: string }) {
-  const totalSpend = items.reduce((s, i) => s + i.buyPrice, 0);
+/** Right half of a stop card — BUY HERE with quantity allocation */
+function BuyPanel({ items, nextCity, leg }: { items: PlannerItem[]; nextCity: string; leg: PlannerLeg }) {
+  const totalSpend         = items.reduce((s, i) => s + i.buyPrice * i.slots, 0);
+  const totalQuantityProfit = items.reduce((s, i) => s + i.quantityProfit, 0);
+  const slotsUsed          = leg.slotsUsed;
+  const totalSlots         = leg.totalSlots;
+
   return (
     <div style={{
       flex: 1,
@@ -222,6 +256,7 @@ function BuyPanel({ items, nextCity }: { items: PlannerItem[]; nextCity: string 
       padding: "0.75rem 1rem",
       minWidth: 0,
     }}>
+      {/* Header */}
       <div style={{
         fontFamily: "'Cormorant Garamond', serif",
         fontSize: "0.7rem",
@@ -231,56 +266,120 @@ function BuyPanel({ items, nextCity }: { items: PlannerItem[]; nextCity: string 
         marginBottom: "0.5rem",
         display: "flex",
         justifyContent: "space-between",
+        alignItems: "center",
       }}>
         <span>↑ Buy for {nextCity}</span>
         {items.length > 0 && (
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.72rem" }}>
-            -{totalSpend}
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.72rem", color: "var(--loss-light)" }}>
+            -{totalSpend.toLocaleString()}
           </span>
         )}
       </div>
+
+      {/* Item rows with slot allocation */}
       {items.length === 0 ? (
         <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", fontStyle: "italic" }}>
           Nothing profitable to buy
         </div>
-      ) : items.map((item, i) => (
-        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.3rem", gap: "0.5rem" }}>
-          <span style={{ fontSize: "0.8rem", color: "var(--parchment)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {item.itemName}
-          </span>
-          <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexShrink: 0 }}>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.78rem", color: "var(--text-muted)" }}>
-              {item.buyPrice}
+      ) : (
+        <>
+          {/* Column headers */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 52px 60px 70px 70px",
+            gap: "0.3rem",
+            marginBottom: "0.25rem",
+            fontSize: "0.6rem",
+            color: "var(--text-dim)",
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            padding: "0 0 0.2rem",
+            borderBottom: "1px solid rgba(61,42,26,0.4)",
+          }}>
+            <span>Item</span>
+            <span style={{ textAlign: "right" }}>×Slots</span>
+            <span style={{ textAlign: "right" }}>Cost ea</span>
+            <span style={{ textAlign: "right" }}>+Profit ea</span>
+            <span style={{ textAlign: "right" }}>= Total</span>
+          </div>
+
+          {items.map((item, i) => (
+            <div key={i} style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 52px 60px 70px 70px",
+              gap: "0.3rem",
+              alignItems: "center",
+              marginBottom: "0.25rem",
+              fontSize: "0.78rem",
+              fontFamily: "'JetBrains Mono', monospace",
+            }}>
+              <span style={{ color: "var(--parchment)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.75rem" }}>
+                {item.itemName}
+                {item.modifierLabel && (
+                  <span title={item.modifierLabel} style={{ cursor: "help", marginLeft: "0.2rem", fontSize: "0.7rem" }}>
+                    {item.modifierLabel.split(" ")[0]}
+                  </span>
+                )}
+              </span>
+              <span style={{ textAlign: "right", color: "var(--gold)", fontWeight: 600 }}>
+                ×{item.slots}
+              </span>
+              <span style={{ textAlign: "right", color: "var(--text-muted)" }}>
+                {item.buyPrice.toLocaleString()}
+              </span>
+              <span style={{ textAlign: "right", color: "var(--profit-light)" }}>
+                +{item.profit.toLocaleString()}
+                {!item.profitConfirmed && (
+                  <span style={{ fontSize: "0.58rem", color: "var(--text-dim)" }}> est.</span>
+                )}
+              </span>
+              <span style={{ textAlign: "right", color: "var(--profit-light)", fontWeight: 600 }}>
+                +{item.quantityProfit.toLocaleString()}
+              </span>
+            </div>
+          ))}
+
+          {/* Footer: slots filled + total profit */}
+          <div style={{
+            borderTop: "1px solid rgba(201,162,74,0.2)",
+            marginTop: "0.4rem",
+            paddingTop: "0.4rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}>
+            <span style={{
+              fontSize: "0.72rem",
+              color: slotsUsed === totalSlots ? "var(--profit-light)" : "var(--gold)",
+              fontFamily: "'JetBrains Mono', monospace",
+            }}>
+              {slotsUsed}/{totalSlots} slots filled
             </span>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.72rem", color: "var(--profit-light)" }}>
-              +{item.profit}{!item.profitConfirmed && <span style={{ fontSize: "0.6rem", color: "var(--text-dim)" }}> est.</span>}
+            <span style={{
+              fontSize: "0.72rem",
+              color: "var(--profit-light)",
+              fontFamily: "'JetBrains Mono', monospace",
+            }}>
+              Est. profit: +{totalQuantityProfit.toLocaleString()}
             </span>
           </div>
-        </div>
-      ))}
+          <div style={{ fontSize: "0.62rem", color: "var(--text-dim)", marginTop: "0.2rem", fontStyle: "italic" }}>
+            Assumes unlimited stock. Adjust manually if a store runs out.
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-/** Per-stop summary bar below the sell/buy panels */
+/** Per-stop summary bar */
 function StopSummaryBar({ leg, modifierMap }: { leg: PlannerLeg; modifierMap: ModifierMap }) {
-  const mods = modifierMap[leg.fromCity] ?? [];
-  const earned  = leg.sell.reduce((s, i) => s + i.profit, 0);
-  const spent   = leg.buy.reduce((s, i)  => s + i.buyPrice, 0);
-  const net     = earned - spent;
+  const mods   = (modifierMap[leg.fromCity] ?? []).filter((m) => m.type === "economic" && m.pct > 0);
+  const earned = leg.sell.reduce((s, i) => s + i.quantityProfit, 0);  // quantity-adjusted
+  const spent  = leg.buy.reduce((s, i)  => s + i.buyPrice * i.slots, 0);
+  const net    = earned - spent;
   return (
-    <div style={{
-      marginTop: "0.6rem",
-      padding: "0.45rem 0.75rem",
-      background: "var(--leather-mid)",
-      borderRadius: 3,
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "0.5rem 1.5rem",
-      alignItems: "center",
-      fontSize: "0.73rem",
-    }}>
-      {/* City name + modifiers */}
+    <div style={{ marginTop: "0.6rem", padding: "0.45rem 0.75rem", background: "var(--leather-mid)", borderRadius: 3, display: "flex", flexWrap: "wrap", gap: "0.5rem 1.5rem", alignItems: "center", fontSize: "0.73rem" }}>
       <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "0.9rem", color: "var(--gold)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
         {leg.fromCity}
         {mods.map((m, i) => (
@@ -294,20 +393,15 @@ function StopSummaryBar({ leg, modifierMap }: { leg: PlannerLeg; modifierMap: Mo
       </span>
       <span style={{ color: "var(--text-dim)" }}>|</span>
       <span style={{ color: "var(--profit-light)" }}>
-        Sell {leg.sell.length} item{leg.sell.length !== 1 ? "s" : ""} → earn{" "}
-        <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>+{earned}</strong>
+        Sell → <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>+{earned.toLocaleString()}</strong>
       </span>
       <span style={{ color: "var(--text-dim)" }}>|</span>
       <span style={{ color: "var(--gold)" }}>
-        Buy {leg.buy.length} item{leg.buy.length !== 1 ? "s" : ""} → spend{" "}
-        <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>{spent}</strong>
+        Buy → <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>{leg.slotsUsed}/{leg.totalSlots} slots, -{spent.toLocaleString()}</strong>
       </span>
       <span style={{ color: "var(--text-dim)" }}>|</span>
       <span style={{ color: net >= 0 ? "var(--profit-light)" : "var(--loss-light)" }}>
-        Net this stop:{" "}
-        <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-          {net >= 0 ? "+" : ""}{net}
-        </strong>
+        Net: <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>{net >= 0 ? "+" : ""}{net.toLocaleString()}</strong>
       </span>
     </div>
   );
@@ -321,9 +415,8 @@ function CargoConnector({ items, toCity }: { items: PlannerItem[]; toCity: strin
       <span style={{ fontStyle: "italic" }}>No cargo → {toCity}</span>
     </div>
   );
-
-  const cargoValue = items.reduce((s, i) => s + i.buyPrice, 0);
-  const cargoProfit = items.reduce((s, i) => s + i.profit, 0);
+  const totalSlots  = items.reduce((s, i) => s + i.slots, 0);
+  const cargoProfit = items.reduce((s, i) => s + i.quantityProfit, 0);
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0" }}>
@@ -349,11 +442,11 @@ function CargoConnector({ items, toCity }: { items: PlannerItem[]; toCity: strin
         </span>
         {items.map((item, i) => (
           <span key={i} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.7rem" }}>
-            {item.itemName}
+            {item.itemName} ×{item.slots}
           </span>
         ))}
         <span style={{ color: "var(--text-dim)", borderLeft: "1px solid var(--border)", paddingLeft: "0.75rem" }}>
-          Value: <strong>{cargoValue}</strong> · Est. profit: <strong style={{ color: "var(--profit-light)" }}>+{cargoProfit}</strong>
+          {totalSlots} slots · Est. profit: <strong style={{ color: "var(--profit-light)" }}>+{cargoProfit.toLocaleString()}</strong>
         </span>
       </div>
     </div>
@@ -367,7 +460,7 @@ function StopCard({ leg, modifierMap }: { leg: PlannerLeg; modifierMap: Modifier
       <StopSummaryBar leg={leg} modifierMap={modifierMap} />
       <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
         <SellPanel items={leg.sell} city={leg.fromCity} />
-        <BuyPanel  items={leg.buy}  nextCity={leg.toCity} />
+        <BuyPanel  items={leg.buy}  nextCity={leg.toCity} leg={leg} />
       </div>
     </div>
   );
@@ -481,7 +574,8 @@ export default function PlannerPage() {
 
   const allCities = data?.cities ?? [];
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
-  const [cargoSlots, setCargoSlots] = useState(5);
+  const [itemTypes, setItemTypes]           = useState(5);   // different item types per leg
+  const [totalSlots, setTotalSlots]         = useState(21);  // total cargo capacity
 
   if (allCities.length > 0 && selectedCities.length === 0) {
     setSelectedCities(allCities);
@@ -489,8 +583,11 @@ export default function PlannerPage() {
 
   const routes = useMemo(() => {
     if (!data || selectedCities.length < 2) return [];
-    return computeRoutes(selectedCities, data.items, data.priceMap, data.modifierMap ?? {}, cargoSlots).slice(0, 4);
-  }, [data, selectedCities, cargoSlots]);
+    return computeRoutes(
+      selectedCities, data.items, data.priceMap, data.modifierMap ?? {},
+      itemTypes, totalSlots
+    ).slice(0, 4);
+  }, [data, selectedCities, itemTypes, totalSlots]);
 
   if (error)   return <ErrorDisplay message={`Failed to load: ${error}`} />;
   if (loading) return <LoadingSpinner />;
@@ -514,7 +611,8 @@ export default function PlannerPage() {
     >
       {/* Controls */}
       <div style={{ background: "var(--leather-light)", border: "1px solid var(--border)", borderRadius: 4, padding: "1.25rem 1.5rem", marginBottom: "1.25rem", display: "flex", gap: "2rem", flexWrap: "wrap", alignItems: "flex-start" }}>
-        <div>
+        {/* City checkboxes */}
+        <div style={{ flex: "1 1 auto" }}>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "0.85rem", color: "var(--text-dim)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.6rem" }}>Cities to Include</div>
           <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
             {allCities.map((city) => {
@@ -530,16 +628,50 @@ export default function PlannerPage() {
             })}
           </div>
         </div>
+
+        {/* Item types per leg */}
         <div>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "0.85rem", color: "var(--text-dim)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.6rem" }}>Cargo Slots</div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "0.85rem", color: "var(--text-dim)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.6rem" }}>
+            Item Types / Leg
+          </div>
           <div style={{ display: "flex", gap: "0.4rem" }}>
             {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => (
-              <button key={n} onClick={() => setCargoSlots(n)} style={{ background: cargoSlots === n ? "var(--gold-dim)" : "var(--leather-mid)", border: `1px solid ${cargoSlots === n ? "var(--gold)" : "var(--border)"}`, color: cargoSlots === n ? "var(--parchment)" : "var(--text-muted)", padding: "0.3rem 0.6rem", borderRadius: 3, cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontSize: "0.8rem" }}>
+              <button key={n} onClick={() => setItemTypes(n)} style={{ background: itemTypes === n ? "var(--gold-dim)" : "var(--leather-mid)", border: `1px solid ${itemTypes === n ? "var(--gold)" : "var(--border)"}`, color: itemTypes === n ? "var(--parchment)" : "var(--text-muted)", padding: "0.3rem 0.6rem", borderRadius: 3, cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontSize: "0.8rem" }}>
                 {n}
               </button>
             ))}
           </div>
           <div style={{ fontSize: "0.68rem", color: "var(--text-dim)", marginTop: "0.3rem" }}>Different item types per leg</div>
+        </div>
+
+        {/* Total cargo slots */}
+        <div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "0.85rem", color: "var(--text-dim)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.6rem" }}>
+            Total Cargo Slots
+          </div>
+          <input
+            type="number"
+            min={1}
+            max={999}
+            value={totalSlots}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              if (!isNaN(v) && v > 0) setTotalSlots(v);
+            }}
+            style={{
+              background: "var(--leather-mid)",
+              border: "1px solid var(--border-gold)",
+              color: "var(--parchment)",
+              borderRadius: 3,
+              padding: "0.3rem 0.6rem",
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "1rem",
+              width: 72,
+              outline: "none",
+              textAlign: "center",
+            }}
+          />
+          <div style={{ fontSize: "0.68rem", color: "var(--text-dim)", marginTop: "0.3rem" }}>Total cargo capacity</div>
         </div>
       </div>
 

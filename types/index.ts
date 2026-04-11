@@ -65,28 +65,32 @@ export interface TradeOpportunity {
 
 // ── Route Planner ───────────────────────────────────────────────────────────
 
-export interface PlannerLeg {
-  fromCity: string;
-  toCity: string;
-  buy: PlannerItem[];          // items to buy at fromCity
-  sell: PlannerItem[];         // items sold at toCity (from previous leg's buy)
-  legProfit: number;
-}
-
 export interface PlannerItem {
   itemName: string;
   buyPrice: number;
   sellPrice: number;
-  profit: number;              // adjusted for modifiers
+  profit: number;          // per-unit, adjusted for modifiers
   profitConfirmed: boolean;
   isLocal: boolean;
   modifierLabel: string;
+  slots: number;           // cargo slots allocated to this item type
+  quantityProfit: number;  // profit × slots
+}
+
+export interface PlannerLeg {
+  fromCity: string;
+  toCity: string;
+  buy: PlannerItem[];
+  sell: PlannerItem[];
+  legProfit: number;       // quantity-adjusted total profit from sell items on this leg
+  slotsUsed: number;       // slots allocated at this buy stop
+  totalSlots: number;      // capacity (for "X/Y slots filled" display)
 }
 
 export interface PlannerRoute {
-  cities: string[];            // ordered loop, e.g. ["Tyre","Damascus","Ecbatana"]
+  cities: string[];
   legs: PlannerLeg[];
-  totalProfit: number;
+  totalProfit: number;     // quantity-adjusted across all legs
 }
 
 // ── Freshness / Stats ───────────────────────────────────────────────────────
