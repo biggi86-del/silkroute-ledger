@@ -19,7 +19,7 @@ export default function NavBar() {
     <nav
       style={{
         background: "var(--leather-mid)",
-        borderBottom: "1px solid var(--border-gold)",
+        borderBottom: "1px solid rgba(201,162,74,0.2)",
         padding: "0 2rem",
         height: "60px",
         display: "flex",
@@ -28,6 +28,8 @@ export default function NavBar() {
         position: "sticky",
         top: 0,
         zIndex: 100,
+        overflow: "hidden",
+        boxShadow: "0 2px 16px rgba(0,0,0,0.4), inset 0 -1px 0 rgba(201,162,74,0.12)",
       }}
     >
       {/* Logo */}
@@ -66,9 +68,11 @@ export default function NavBar() {
                 color: active ? "var(--gold)" : "var(--text-muted)",
                 textDecoration: "none",
                 padding: "0.25rem 0.6rem",
-                borderBottom: active ? "1px solid var(--gold)" : "1px solid transparent",
+                borderBottom: active ? "3px solid var(--gold)" : "3px solid transparent",
                 letterSpacing: "0.04em",
                 transition: "color 0.2s",
+                textShadow: active ? "0 0 14px rgba(201,162,74,0.55)" : "none",
+                marginBottom: active ? "-1px" : undefined,
               }}
             >
               {label}

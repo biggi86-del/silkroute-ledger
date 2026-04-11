@@ -311,3 +311,145 @@ h1, h2, h3, h4, h5, h6 {
     @apply font-sans;
   }
 }
+/* ═══════════════════════════════════════════════════════════════════════════
+   ATMOSPHERIC REDESIGN — depth, texture, grain, glow
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 1. Noise grain texture overlay — kills the flat digital feel */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  pointer-events: none;
+  z-index: 9997;
+}
+
+/* 2. Vignette — candlelight framing */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  box-shadow: inset 0 0 160px rgba(0,0,0,0.55);
+  pointer-events: none;
+  z-index: 9996;
+}
+
+/* 3. Card depth — genuine depth, not flat */
+.card,
+[class*="leather-light"],
+div[style*="var(--leather-light)"] {
+  box-shadow: inset 0 1px 0 rgba(201,162,74,0.12), 0 4px 24px rgba(0,0,0,0.35);
+}
+
+/* Stat card embossed/pressed look */
+.stat-card-embossed {
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.025), 0 1px 0 rgba(201,162,74,0.08);
+}
+
+/* 4. Typography — heavier headings, stamped feel */
+h1, h2, h3 {
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+/* Section labels with gold divider extending right */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(201,162,74,0.45), transparent);
+}
+
+/* 5. Navigation grain + glow underline */
+.nav-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.3'/%3E%3C/svg%3E");
+  opacity: 0.035;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 6. Active nav — 3px glowing gold underline */
+.nav-link.active {
+  border-bottom: 3px solid var(--gold) !important;
+  text-shadow: 0 0 12px rgba(201,162,74,0.5);
+  color: var(--gold);
+}
+
+/* 7. Ledger table — ruled lines, depth */
+.ledger-table td {
+  border-bottom: 1px solid rgba(201,162,74,0.07) !important;
+}
+.ledger-table tr:nth-child(even) td {
+  background: rgba(255,255,255,0.012);
+}
+.ledger-table th {
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  letter-spacing: 0.08em;
+}
+
+/* 8. Profit / loss text glow */
+.profit-text {
+  text-shadow: 0 0 10px rgba(74,124,89,0.45) !important;
+}
+.loss-text {
+  text-shadow: 0 0 10px rgba(139,46,46,0.5) !important;
+}
+
+/* 9. Freshness dot pulse animation */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.7; box-shadow: 0 0 4px 2px currentColor; }
+}
+.freshness-dot {
+  animation: pulse-dot 3s ease-in-out infinite;
+}
+
+/* 10. Price-num glow for profitable numbers */
+.price-num-profit {
+  font-family: 'JetBrains Mono', monospace;
+  text-shadow: 0 0 8px rgba(74,124,89,0.4);
+  color: var(--profit-light);
+}
+.price-num-loss {
+  font-family: 'JetBrains Mono', monospace;
+  text-shadow: 0 0 8px rgba(139,46,46,0.4);
+  color: var(--loss-light);
+}
+
+/* 11. Best Trade card pinned-notice feel */
+.best-trade-card {
+  border-left: 4px solid var(--gold) !important;
+  border-top: 2px solid var(--gold) !important;
+  border-right: 1px solid rgba(201,162,74,0.3) !important;
+  border-bottom: 1px solid rgba(201,162,74,0.3) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(201,162,74,0.15),
+    0 4px 32px rgba(0,0,0,0.5),
+    -2px 0 20px rgba(201,162,74,0.08) !important;
+  background: radial-gradient(ellipse at 10% 50%, rgba(201,162,74,0.04) 0%, transparent 60%), var(--leather-light) !important;
+}
+
+/* 12. City modifier colour accents */
+.city-card-port     { border-left: 3px solid #4A9B9B !important; background-image: radial-gradient(ellipse at 0 50%, rgba(74,155,155,0.03), transparent 70%); }
+.city-card-desert   { border-left: 3px solid #B8820A !important; background-image: radial-gradient(ellipse at 0 50%, rgba(184,130,10,0.03), transparent 70%); }
+.city-card-frontier { border-left: 3px solid #9B4A4A !important; background-image: radial-gradient(ellipse at 0 50%, rgba(155,74,74,0.03), transparent 70%); }
+.city-card-capital  { border-left: 3px solid #C9A24A !important; background-image: radial-gradient(ellipse at 0 50%, rgba(201,162,74,0.03), transparent 70%); }
+.city-card-harvest  { border-left: 3px solid #4A7C59 !important; background-image: radial-gradient(ellipse at 0 50%, rgba(74,124,89,0.04), transparent 70%); }
+.city-card-homog    { border-left: 3px solid #7B6B9B !important; background-image: radial-gradient(ellipse at 0 50%, rgba(123,107,155,0.03), transparent 70%); }
+.city-card-conflict { border-left: 3px solid #8B2E2E !important; background-image: radial-gradient(ellipse at 0 50%, rgba(139,46,46,0.04), transparent 70%); }
+.city-card-default  { border-left: 3px solid var(--border) !important; }

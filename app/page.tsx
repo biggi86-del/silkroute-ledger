@@ -53,12 +53,11 @@ function BestTradeCard({ trade }: { trade: TradeOpportunity }) {
 
   return (
     <motion.div
-      animate={{ boxShadow: ["0 0 0px rgba(201,162,74,0)", "0 0 12px rgba(201,162,74,0.35)", "0 0 0px rgba(201,162,74,0)"] }}
+      animate={{ boxShadow: ["0 0 0px rgba(201,162,74,0)", "0 0 20px rgba(201,162,74,0.3)", "0 0 0px rgba(201,162,74,0)"] }}
       transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+      className="best-trade-card"
       style={{
-        border: "2px solid var(--gold)",
         borderRadius: 6,
-        background: "var(--leather-light)",
         padding: "1.5rem 2rem",
         marginBottom: "1rem",
         position: "relative",
@@ -72,11 +71,8 @@ function BestTradeCard({ trade }: { trade: TradeOpportunity }) {
         pointerEvents: "none",
       }} />
 
-      <div style={{
-        fontSize: "0.7rem", color: "var(--gold)", letterSpacing: "0.15em",
-        textTransform: "uppercase", marginBottom: "0.75rem", fontFamily: "'Cormorant Garamond', serif",
-      }}>
-        ✦ Best Trade Right Now
+      <div className="section-label" style={{ marginBottom: "0.75rem" }}>
+        Best Trade Right Now
       </div>
 
       {/* Main trade line */}
@@ -201,7 +197,7 @@ function BestLoopCard({ loop }: { loop: NonNullable<ApiData["bestLoop"]> }) {
 
 function StatCard({ label, value, color, numeric }: { label: string; value: string; color?: string; numeric?: number }) {
   return (
-    <div style={{ background: "var(--leather-light)", border: "1px solid var(--border)", borderTop: "2px solid var(--gold-dim)", borderRadius: 4, padding: "0.9rem 1.25rem", minWidth: 0, flex: 1 }}>
+    <div className="stat-card-embossed" style={{ background: "var(--leather-light)", border: "1px solid var(--border)", borderTop: "2px solid var(--gold-dim)", borderRadius: 4, padding: "0.9rem 1.25rem", minWidth: 0, flex: 1 }}>
       <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Cormorant Garamond', serif", marginBottom: "0.3rem" }}>{label}</div>
       <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "1.4rem", color: color ?? "var(--parchment)", fontWeight: 500 }}>
         {numeric !== undefined ? <CountUp end={numeric} duration={0.8} separator="," /> : value}
@@ -217,14 +213,28 @@ function CityCard({ f, modifierMap }: { f: CityFreshness & { itemCount: number }
   const color = freshnessColor(f.ageMinutes);
   const hasConflict = econMods.some((m) => /conflict|war|battle|plague/i.test(m.name));
   const hasHarvest  = econMods.some((m) => /harvest|abundance|boom/i.test(m.name));
+  const hasPort     = econMods.some((m) => /port|harbour|harbor/i.test(m.name));
+  const hasDesert   = econMods.some((m) => /desert/i.test(m.name));
+  const hasFrontier = econMods.some((m) => /frontier/i.test(m.name));
+  const hasCapital  = econMods.some((m) => /capital/i.test(m.name));
+  const hasHomog    = econMods.some((m) => /homogen/i.test(m.name));
   const highlight   = hasConflict ? "rgba(139,46,46,0.08)" : hasHarvest ? "rgba(74,124,89,0.08)" : undefined;
+
+  const cityClass = hasConflict ? "city-card-conflict"
+    : hasHarvest  ? "city-card-harvest"
+    : hasPort     ? "city-card-port"
+    : hasDesert   ? "city-card-desert"
+    : hasFrontier ? "city-card-frontier"
+    : hasCapital  ? "city-card-capital"
+    : hasHomog    ? "city-card-homog"
+    : "city-card-default";
 
   return (
     <motion.div
       variants={scaleUp} initial="rest" whileHover="hover"
+      className={cityClass}
       style={{
         background: highlight ?? "var(--leather-light)",
-        border: `1px solid ${hasConflict ? "rgba(139,46,46,0.3)" : hasHarvest ? "rgba(74,124,89,0.3)" : "var(--border)"}`,
         borderRadius: 4, padding: "0.85rem 1rem",
         minWidth: 140, flex: "1 1 140px", cursor: "default",
       }}
@@ -276,10 +286,8 @@ function PriceChangesCard({ changes }: { changes: PriceChange[] }) {
     }}>
       <div style={{
         padding: "0.7rem 1.25rem", borderBottom: "1px solid var(--border-gold)",
-        fontSize: "0.7rem", color: "var(--gold)", letterSpacing: "0.12em",
-        textTransform: "uppercase", fontFamily: "'Cormorant Garamond', serif",
       }}>
-        ✦ Price Changes
+        <span className="section-label">Price Changes</span>
       </div>
       <div style={{ padding: "0.5rem 0" }}>
         {changes.length === 0 ? (
