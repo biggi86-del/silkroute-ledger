@@ -32,12 +32,13 @@ export interface PriceMap {
 
 export interface CityModifier {
   city: string;
-  name: string;          // e.g. "Major Conflict"
-  effectText: string;    // raw text from the sheet
-  pct: number;           // e.g. 15
-  direction: 1 | -1;    // +1 = bonus, -1 = penalty
-  categories: string[];  // e.g. ["weapons","metal"]
-  emoji: string;         // display icon
+  name: string;
+  effectText: string;
+  pct: number;
+  direction: 1 | -1;
+  categories: string[];
+  emoji: string;
+  type: "economic" | "cultural" | "language"; // cultural/language = display only, no price effect
 }
 
 // Keyed by city → list of modifiers active there

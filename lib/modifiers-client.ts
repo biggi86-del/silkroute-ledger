@@ -1,6 +1,5 @@
 /**
- * Client-safe version of getModifierBonus.
- * Mirrors lib/modifiers.ts but without "server-only" import.
+ * Client-safe modifier utilities — no "server-only" import.
  * Used by client components (planner page) that receive modifierMap as a prop.
  */
 import type { ModifierMap } from "@/types";
@@ -25,12 +24,15 @@ function getAffectedItems(categories: string[]): Set<string> {
   return items;
 }
 
+/** Only applies economic modifiers — cultural/language types are display-only */
 export function getModifierBonus(
   itemName: string,
   sellCity: string,
   modifierMap: ModifierMap
 ): { bonus: number; label: string } {
-  const mods = modifierMap[sellCity] ?? [];
+  const mods = (modifierMap[sellCity] ?? []).filter(
+    (m) => (m.type ?? "economic") === "economic" && m.pct > 0
+  );
   let totalBonus = 0;
   const labels: string[] = [];
 
@@ -42,6 +44,5 @@ export function getModifierBonus(
       labels.push(`${mod.emoji} ${mod.name} (${sign}${mod.pct}%)`);
     }
   }
-
   return { bonus: totalBonus, label: labels.join(" · ") };
 }

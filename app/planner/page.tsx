@@ -496,7 +496,9 @@ export default function PlannerPage() {
   if (loading) return <LoadingSpinner />;
 
   const modifierMap    = data?.modifierMap ?? {};
-  const activeModifiers = Object.values(modifierMap).flat();
+  const activeModifiers = Object.values(modifierMap).flat().filter(
+    (m) => m.type === "economic" && m.pct > 0
+  );
 
   function toggleCity(city: string) {
     setSelectedCities((prev) =>
@@ -517,7 +519,7 @@ export default function PlannerPage() {
           <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
             {allCities.map((city) => {
               const active = selectedCities.includes(city);
-              const mods   = modifierMap[city] ?? [];
+              const mods   = (modifierMap[city] ?? []).filter((m) => m.type === "economic" && m.pct > 0);
               return (
                 <label key={city} style={{ display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer", padding: "0.3rem 0.7rem", borderRadius: 3, border: `1px solid ${active ? "var(--gold)" : "var(--border)"}`, background: active ? "rgba(201,162,74,0.08)" : "var(--leather-mid)", color: active ? "var(--gold)" : "var(--text-muted)", fontSize: "0.85rem", fontFamily: "'Cormorant Garamond', serif", transition: "all 0.15s", userSelect: "none" }}>
                   <input type="checkbox" checked={active} onChange={() => toggleCity(city)} style={{ accentColor: "var(--gold)", width: 12, height: 12 }} />
