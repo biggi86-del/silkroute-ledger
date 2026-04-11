@@ -43,6 +43,13 @@ function getAuthClient() {
   return auth;
 }
 
+const KNOWN_CITIES = ["Tyre", "Damascus", "Palmyra", "Ctesiphon", "Ecbatana"];
+
+function normalizeCity(raw: string): string {
+  const cleaned = raw.replace(/^\d+\s+/, "").trim();
+  return KNOWN_CITIES.find((c) => cleaned === c || cleaned.endsWith(c)) ?? cleaned;
+}
+
 function parseRows(rawValues: unknown[][]): RawRow[] {
   // Skip header row if first cell looks like a column label
   const dataRows = rawValues.filter((row, idx) => {
@@ -74,7 +81,7 @@ function parseRows(rawValues: unknown[][]): RawRow[] {
 
     rows.push({
       timestamp: sanitize(String(timestamp)),
-      city:      sanitize(String(city)),
+      city:      normalizeCity(sanitize(String(city))),
       store:     storeName,
       mode:      modeClean as "Buy" | "Sell",
       itemName:  sanitize(String(itemName)),
