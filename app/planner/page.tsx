@@ -7,7 +7,7 @@ import ErrorDisplay from "@/components/ErrorDisplay";
 import RefreshButton from "@/components/RefreshButton";
 import { useDataFetch } from "@/hooks/useDataFetch";
 import type { PriceMap, ModifierMap, PlannerRoute, PlannerLeg, PlannerItem } from "@/types";
-import { getModifierBonus } from "@/lib/modifiers-client";
+import { computeRoutes } from "@/lib/planner";
 
 interface ApiData {
   cities: string[];
@@ -17,123 +17,6 @@ interface ApiData {
   fetchedAt?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Algorithm
-// ---------------------------------------------------------------------------
-function permutations<T>(arr: T[]): T[][] {
-  if (arr.length <= 1) return [arr];
-  const result: T[][] = [];
-  for (let i = 0; i < arr.length; i++) {
-    const rest = [...arr.slice(0, i), ...arr.slice(i + 1)];
-    for (const perm of permutations(rest)) result.push([arr[i], ...perm]);
-  }
-  return result;
-}
-
-/**
- * Distribute totalSlots across items using profit-weighted allocation.
- * Highest-profit item gets the most slots; remainder goes to top items.
- *
- * Example (verified against spec): Sea Salt +25, Olive Oil +12, 21 total slots
- *   Sea Salt:  floor(25/37 × 21) = 14 + 1 remainder = 15 slots
- *   Olive Oil: floor(12/37 × 21) = 6 slots
- *   Total: 21/21 ✓
- */
-function allocateSlots(items: PlannerItem[], totalSlots: number): number[] {
-  if (items.length === 0) return [];
-  const totalProfit = items.reduce((s, i) => s + Math.max(i.profit, 1), 0);
-  const initial = items.map((item) =>
-    Math.floor((Math.max(item.profit, 1) / totalProfit) * totalSlots)
-  );
-  const remainder = totalSlots - initial.reduce((s, n) => s + n, 0);
-  // Distribute remainder one slot at a time to highest-profit items (already sorted)
-  return initial.map((n, i) => n + (i < remainder ? 1 : 0));
-}
-
-function getBestItemsForLeg(
-  fromCity: string,
-  toCity: string,
-  priceMap: PriceMap,
-  modifierMap: ModifierMap,
-  items: string[],
-  itemTypes: number,  // max distinct item types
-  totalSlots: number  // total cargo capacity
-): PlannerItem[] {
-  const candidates: PlannerItem[] = [];
-  for (const itemName of items) {
-    const buyEntry = priceMap[itemName]?.[fromCity]?.Buy;
-    if (!buyEntry) continue;
-    const actualSell    = priceMap[itemName]?.[toCity]?.Sell;
-    const estimatedSell = priceMap[itemName]?.[toCity]?.Buy;
-    const sellEntry = actualSell ?? estimatedSell;
-    if (!sellEntry) continue;
-    const baseProfit = sellEntry.price - buyEntry.price;
-    if (baseProfit <= 0) continue;
-    if (sellEntry.local) continue;
-    const { bonus, label } = getModifierBonus(itemName, toCity, modifierMap);
-    const adjustedProfit = Math.round(baseProfit * (1 + bonus));
-    candidates.push({
-      itemName,
-      buyPrice:        buyEntry.price,
-      sellPrice:       sellEntry.price,
-      profit:          adjustedProfit,
-      profitConfirmed: !!actualSell,
-      isLocal:         sellEntry.local,
-      modifierLabel:   label,
-      slots:           0,           // filled below
-      quantityProfit:  0,           // filled below
-    });
-  }
-
-  // Pick top itemTypes items by per-unit profit
-  const top = candidates.sort((a, b) => b.profit - a.profit).slice(0, itemTypes);
-
-  // Allocate totalSlots across the selected items (profit-weighted)
-  const slotAllocation = allocateSlots(top, totalSlots);
-  return top.map((item, i) => ({
-    ...item,
-    slots:          slotAllocation[i],
-    quantityProfit: item.profit * slotAllocation[i],
-  }));
-}
-
-function computeRoutes(
-  selectedCities: string[],
-  items: string[],
-  priceMap: PriceMap,
-  modifierMap: ModifierMap,
-  itemTypes: number,
-  totalSlots: number
-): PlannerRoute[] {
-  if (selectedCities.length < 2) return [];
-  const routes: PlannerRoute[] = [];
-  const [fixed, ...rest] = selectedCities;
-  for (const perm of permutations(rest)) {
-    const cityOrder = [fixed, ...perm];
-    const legs: PlannerLeg[] = [];
-    let totalProfit = 0;
-    for (let i = 0; i < cityOrder.length; i++) {
-      const fromCity = cityOrder[i];
-      const toCity   = cityOrder[(i + 1) % cityOrder.length];
-      const prevFrom = cityOrder[(i - 1 + cityOrder.length) % cityOrder.length];
-
-      const buy  = getBestItemsForLeg(fromCity, toCity, priceMap, modifierMap, items, itemTypes, totalSlots);
-      const sell = getBestItemsForLeg(prevFrom, fromCity, priceMap, modifierMap, items, itemTypes, totalSlots);
-
-      // Quantity-adjusted profit: sum of (profit × slots) for sold items
-      const legProfit = sell.reduce((s, item) => s + item.quantityProfit, 0);
-      totalProfit += legProfit;
-
-      const slotsUsed = buy.reduce((s, item) => s + item.slots, 0);
-
-      legs.push({ fromCity, toCity, buy, sell, legProfit, slotsUsed, totalSlots });
-    }
-    routes.push({ cities: cityOrder, legs, totalProfit });
-  }
-  return routes.sort((a, b) => b.totalProfit - a.totalProfit);
-}
-
-// ---------------------------------------------------------------------------
 // UI — redesigned
 // ---------------------------------------------------------------------------
 

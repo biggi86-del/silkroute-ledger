@@ -1,6 +1,6 @@
 import "server-only";
 import { google } from "googleapis";
-import type { RawRow, PriceEntry, PriceMap } from "@/types";
+import type { RawRow, PriceEntry, PriceMap, PriceChange } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Sanitisation — strip HTML tags only. Do NOT HTML-encode entities —
@@ -208,4 +208,35 @@ export function formatAge(timestamp: string): string {
   const hrs = mins / 60;
   if (hrs < 24) return `${hrs.toFixed(1)}h ago`;
   return `${(hrs / 24).toFixed(1)}d ago`;
+}
+
+/** Compare the two most recent entries per (city, item, mode) to find price changes */
+export function computePriceChanges(allRows: RawRow[]): PriceChange[] {
+  const groups = new Map<string, RawRow[]>();
+  for (const row of allRows) {
+    const key = `${row.city}::${row.itemName}::${row.mode}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(row);
+  }
+
+  const changes: PriceChange[] = [];
+  for (const rows of groups.values()) {
+    if (rows.length < 2) continue;
+    const sorted = [...rows].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+    const latest = sorted[0];
+    const prev   = sorted[1];
+    if (latest.price === prev.price) continue;
+    changes.push({
+      itemName: latest.itemName,
+      city:     latest.city,
+      mode:     latest.mode,
+      oldPrice: prev.price,
+      newPrice: latest.price,
+      delta:    latest.price - prev.price,
+    });
+  }
+
+  return changes.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 5);
 }

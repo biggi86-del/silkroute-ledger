@@ -115,3 +115,12 @@ export interface HistoryPoint {
   mode: "Buy" | "Sell";
   price: number;
 }
+
+export interface PriceChange {
+  itemName: string;
+  city: string;
+  mode: "Buy" | "Sell";
+  oldPrice: number;
+  newPrice: number;
+  delta: number;
+}
