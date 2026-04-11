@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
 import PageWrapper from "@/components/PageWrapper";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
+import RefreshButton from "@/components/RefreshButton";
+import { useDataFetch } from "@/hooks/useDataFetch";
 import type { PriceMap, TradeOpportunity } from "@/types";
 
 interface ApiData {
@@ -11,6 +13,7 @@ interface ApiData {
   items: string[];
   priceMap: PriceMap;
   trades: TradeOpportunity[];
+  fetchedAt?: string;
 }
 
 function getAgeMinutes(ts: string | undefined): number | null {
@@ -43,18 +46,7 @@ function ageBg(mins: number | null): string {
 }
 
 export default function CoveragePage() {
-  const [data, setData] = useState<ApiData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/data")
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then(setData)
-      .catch((e) => setError(e.message));
-  }, []);
+  const { data, error, loading, refreshing, fetchedAt, refresh } = useDataFetch<ApiData>();
 
   const scoutOrders = useMemo(() => {
     if (!data) return [];
@@ -84,7 +76,8 @@ export default function CoveragePage() {
   }, [data]);
 
   if (error) return <ErrorDisplay message={`Failed to load: ${error}`} />;
-  if (!data) return <LoadingSpinner />;
+  if (loading) return <LoadingSpinner />;
+  if (!data) return null;
 
   const { cities, items, priceMap } = data;
 
@@ -104,6 +97,7 @@ export default function CoveragePage() {
     <PageWrapper
       title="Coverage"
       subtitle={`${coveragePct}% of item × city combinations scanned — ${filledSlots} of ${totalSlots} slots filled`}
+      actions={<RefreshButton fetchedAt={fetchedAt} refreshing={refreshing} onRefresh={refresh} />}
     >
       {/* Summary Stats */}
       <div

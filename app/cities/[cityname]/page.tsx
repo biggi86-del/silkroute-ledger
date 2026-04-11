@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { notFound } from "next/navigation";
 import PageWrapper from "@/components/PageWrapper";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
+import RefreshButton from "@/components/RefreshButton";
 import type { PriceMap, TradeOpportunity } from "@/types";
 
 interface ApiData {
@@ -12,6 +12,7 @@ interface ApiData {
   priceMap: PriceMap;
   items: string[];
   trades: TradeOpportunity[];
+  fetchedAt?: string;
 }
 
 function formatAge(ts: string) {
@@ -28,29 +29,32 @@ export default function CityPage({
   params: Promise<{ cityname: string }>;
 }) {
   const { cityname } = use(params);
-  const [data, setData] = useState<ApiData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [data, setData]           = useState<ApiData | null>(null);
+  const [error, setError]         = useState<string | null>(null);
   const [notFoundFlag, setNotFoundFlag] = useState(false);
+  const [refreshing, setRefreshing]     = useState(false);
+  const [fetchedAt, setFetchedAt]       = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch("/api/data")
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
+  const loadData = (bust = false) => {
+    const url = bust ? "/api/data?refresh=true" : "/api/data";
+    fetch(url, { cache: "no-store" })
+      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((d: ApiData) => {
-        // Check if city exists (case-insensitive)
-        const match = d.cities.find(
-          (c) => c.toLowerCase() === cityname.toLowerCase()
-        );
-        if (!match) {
-          setNotFoundFlag(true);
-          return;
-        }
+        const match = d.cities.find((c) => c.toLowerCase() === cityname.toLowerCase());
+        if (!match) { setNotFoundFlag(true); return; }
         setData(d);
+        setFetchedAt(d.fetchedAt ?? new Date().toISOString());
       })
       .catch((e) => setError(e.message));
-  }, [cityname]);
+  };
+
+  useEffect(() => { loadData(); }, [cityname]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadData(true);
+    setRefreshing(false);
+  };
 
   if (notFoundFlag) {
     return (
@@ -148,16 +152,10 @@ export default function CityPage({
       title={cityName}
       subtitle={`City intelligence — ${cityBuyItems.length} buy prices, ${citySellItems.length} sell prices on record`}
       actions={
-        <a
-          href="/"
-          style={{
-            fontSize: "0.8rem",
-            color: "var(--text-dim)",
-            textDecoration: "none",
-          }}
-        >
-          ← All Cities
-        </a>
+        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+          <a href="/" style={{ fontSize: "0.8rem", color: "var(--text-dim)", textDecoration: "none" }}>← All Cities</a>
+          <RefreshButton fetchedAt={fetchedAt} refreshing={refreshing} onRefresh={handleRefresh} />
+        </div>
       }
     >
       <div

@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useState, useRef } from "react";
 import PageWrapper from "@/components/PageWrapper";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
+import RefreshButton from "@/components/RefreshButton";
+import { useDataFetch } from "@/hooks/useDataFetch";
 import type { PriceMap } from "@/types";
 
 interface ApiData {
@@ -11,6 +13,7 @@ interface ApiData {
   items: string[];
   priceMap: PriceMap;
   modeCounts?: { buy: number; sell: number };
+  fetchedAt?: string;
 }
 
 interface TooltipData {
@@ -18,7 +21,7 @@ interface TooltipData {
   y: number;
   city: string;
   item: string;
-  buyEntry: { store: string; price: number; timestamp: string; local: boolean } | null;
+  buyEntry:  { store: string; price: number; timestamp: string; local: boolean } | null;
   sellEntry: { store: string; price: number; timestamp: string } | null;
 }
 
@@ -32,27 +35,19 @@ function formatAge(ts: string) {
 }
 
 export default function PricesPage() {
-  const [data, setData] = useState<ApiData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data, error, loading, refreshing, fetchedAt, refresh } = useDataFetch<ApiData>();
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetch("/api/data", { cache: "no-store" })
-      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-      .then(setData)
-      .catch((e) => setError(e.message));
-  }, []);
-
   if (error) return <ErrorDisplay message={`Failed to load: ${error}`} />;
-  if (!data) return <LoadingSpinner />;
+  if (loading) return <LoadingSpinner />;
+  if (!data) return null;
 
   const { cities, items, priceMap, modeCounts } = data;
 
   // Cheapest / priciest Buy city per item
   const cheapestBuyCity: Record<string, string | null> = {};
-  const priciesBuyCity: Record<string, string | null> = {};
-
+  const priciesBuyCity:  Record<string, string | null> = {};
   for (const item of items) {
     let min = Infinity, max = -Infinity;
     let minCity: string | null = null, maxCity: string | null = null;
@@ -64,32 +59,28 @@ export default function PricesPage() {
       }
     }
     cheapestBuyCity[item] = minCity;
-    priciesBuyCity[item] = maxCity;
+    priciesBuyCity[item]  = maxCity;
   }
 
   return (
     <PageWrapper
       title="Price Grid"
-      subtitle="Buy prices (green) and Sell prices (amber) for every item × city — hover for details"
+      subtitle="Buy (green) and Sell (amber) prices per item × city — hover cells for details"
+      actions={<RefreshButton fetchedAt={fetchedAt} refreshing={refreshing} onRefresh={refresh} />}
     >
-      {/* Legend + mode counts */}
+      {/* Legend */}
       <div style={{ display: "flex", gap: "1.5rem", marginBottom: "1rem", flexWrap: "wrap", alignItems: "center" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", color: "var(--text-dim)" }}>
-          <span style={{ display: "inline-block", width: 10, height: 10, background: "rgba(74,124,89,0.5)", border: "1px solid var(--profit)", borderRadius: 1 }} />
-          Buy price
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", color: "var(--text-dim)" }}>
-          <span style={{ display: "inline-block", width: 10, height: 10, background: "rgba(201,162,74,0.2)", border: "1px solid var(--gold-dim)", borderRadius: 1 }} />
-          Sell price
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", color: "var(--text-dim)" }}>
-          <span style={{ display: "inline-block", width: 10, height: 10, border: "2px solid var(--profit)", borderRadius: 1 }} />
-          Cheapest buy
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", color: "var(--text-dim)" }}>
-          <span style={{ display: "inline-block", width: 10, height: 10, border: "2px solid var(--loss)", borderRadius: 1 }} />
-          Priciest buy
-        </span>
+        {[
+          { bg: "rgba(74,124,89,0.5)", border: "var(--profit)", label: "Buy price" },
+          { bg: "rgba(201,162,74,0.2)", border: "var(--gold-dim)", label: "Sell price" },
+          { bg: "transparent", border: "var(--profit)", label: "Cheapest buy" },
+          { bg: "transparent", border: "var(--loss)",   label: "Priciest buy" },
+        ].map(({ bg, border, label }) => (
+          <span key={label} style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", color: "var(--text-dim)" }}>
+            <span style={{ display: "inline-block", width: 10, height: 10, background: bg, border: `2px solid ${border}`, borderRadius: 1 }} />
+            {label}
+          </span>
+        ))}
         {modeCounts && (
           <span style={{ marginLeft: "auto", fontSize: "0.72rem", color: "var(--text-dim)", fontFamily: "'JetBrains Mono', monospace" }}>
             {modeCounts.buy} Buy · {modeCounts.sell} Sell entries
@@ -101,22 +92,11 @@ export default function PricesPage() {
         <table style={{ borderCollapse: "collapse", width: "100%", fontSize: "0.78rem" }}>
           <thead>
             <tr>
-              <th className="sticky-col-header" style={{
-                background: "var(--leather-mid)", color: "var(--gold)",
-                fontFamily: "'Cormorant Garamond', serif", fontSize: "0.9rem", fontWeight: 600,
-                padding: "0.6rem 0.75rem", borderBottom: "1px solid var(--border-gold)",
-                borderRight: "1px solid var(--border-gold)", textAlign: "left",
-                whiteSpace: "nowrap", minWidth: 180,
-              }}>
+              <th className="sticky-col-header" style={{ background: "var(--leather-mid)", color: "var(--gold)", fontFamily: "'Cormorant Garamond', serif", fontSize: "0.9rem", fontWeight: 600, padding: "0.6rem 0.75rem", borderBottom: "1px solid var(--border-gold)", borderRight: "1px solid var(--border-gold)", textAlign: "left", whiteSpace: "nowrap", minWidth: 180 }}>
                 Item
               </th>
               {cities.map((city) => (
-                <th key={city} style={{
-                  background: "var(--leather-mid)", color: "var(--gold)",
-                  fontFamily: "'Cormorant Garamond', serif", fontSize: "0.9rem", fontWeight: 600,
-                  padding: "0.6rem 0.75rem", borderBottom: "1px solid var(--border-gold)",
-                  textAlign: "right", whiteSpace: "nowrap",
-                }}>
+                <th key={city} style={{ background: "var(--leather-mid)", color: "var(--gold)", fontFamily: "'Cormorant Garamond', serif", fontSize: "0.9rem", fontWeight: 600, padding: "0.6rem 0.75rem", borderBottom: "1px solid var(--border-gold)", textAlign: "right", whiteSpace: "nowrap" }}>
                   {city}
                 </th>
               ))}
@@ -125,37 +105,26 @@ export default function PricesPage() {
           <tbody>
             {items.map((item) => (
               <tr key={item}>
-                <td className="sticky-col" style={{
-                  background: "var(--leather-light)", color: "var(--parchment)",
-                  padding: "0.35rem 0.75rem", borderBottom: "1px solid rgba(61,42,26,0.5)",
-                  borderRight: "1px solid var(--border)", fontWeight: 500, whiteSpace: "nowrap",
-                }}>
+                <td className="sticky-col" style={{ background: "var(--leather-light)", color: "var(--parchment)", padding: "0.35rem 0.75rem", borderBottom: "1px solid rgba(61,42,26,0.5)", borderRight: "1px solid var(--border)", fontWeight: 500, whiteSpace: "nowrap" }}>
                   {item}
                 </td>
                 {cities.map((city) => {
                   const buyEntry  = priceMap[item]?.[city]?.Buy  ?? null;
                   const sellEntry = priceMap[item]?.[city]?.Sell ?? null;
-
-                  const isCheapestBuy = buyEntry && cheapestBuyCity[item] === city;
-                  const isPriciest    = buyEntry && priciesBuyCity[item] === city;
+                  const isCheapest = buyEntry && cheapestBuyCity[item] === city;
+                  const isPriciest  = buyEntry && priciesBuyCity[item]  === city;
                   const citiesWithBuy = cities.filter((c) => priceMap[item]?.[c]?.Buy).length;
-                  const showBorder    = citiesWithBuy > 1;
-
+                  const showBorder  = citiesWithBuy > 1;
                   const hasAny = buyEntry || sellEntry;
 
                   return (
-                    <td
-                      key={city}
+                    <td key={city}
                       style={{
                         padding: "0.3rem 0.75rem",
                         borderBottom: "1px solid rgba(61,42,26,0.5)",
                         textAlign: "right",
                         cursor: hasAny ? "pointer" : "default",
-                        outline: showBorder && isCheapestBuy
-                          ? "2px solid var(--profit)"
-                          : showBorder && isPriciest
-                          ? "2px solid var(--loss)"
-                          : undefined,
+                        outline: showBorder && isCheapest ? "2px solid var(--profit)" : showBorder && isPriciest ? "2px solid var(--loss)" : undefined,
                         outlineOffset: "-2px",
                         verticalAlign: "middle",
                       }}
@@ -174,14 +143,8 @@ export default function PricesPage() {
                     >
                       {hasAny ? (
                         <div style={{ display: "flex", flexDirection: "column", gap: "0.1rem", alignItems: "flex-end" }}>
-                          {/* Buy price — green */}
                           {buyEntry ? (
-                            <span style={{
-                              color: showBorder && isCheapestBuy ? "var(--profit-light)" : showBorder && isPriciest ? "var(--loss-light)" : "var(--parchment)",
-                              fontFamily: "'JetBrains Mono', monospace",
-                              fontSize: "0.78rem",
-                              display: "flex", alignItems: "center", gap: "0.2rem",
-                            }}>
+                            <span style={{ color: showBorder && isCheapest ? "var(--profit-light)" : showBorder && isPriciest ? "var(--loss-light)" : "var(--parchment)", fontFamily: "'JetBrains Mono', monospace", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: "0.2rem" }}>
                               <span style={{ fontSize: "0.6rem", color: "var(--profit)", opacity: 0.8 }}>B</span>
                               {buyEntry.price.toLocaleString()}
                               {buyEntry.local && <span title="Locally produced" style={{ fontSize: "0.65rem" }}>🪙</span>}
@@ -189,14 +152,8 @@ export default function PricesPage() {
                           ) : (
                             <span style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}>B —</span>
                           )}
-                          {/* Sell price — amber */}
                           {sellEntry ? (
-                            <span style={{
-                              color: "var(--gold)",
-                              fontFamily: "'JetBrains Mono', monospace",
-                              fontSize: "0.78rem",
-                              display: "flex", alignItems: "center", gap: "0.2rem",
-                            }}>
+                            <span style={{ color: "var(--gold)", fontFamily: "'JetBrains Mono', monospace", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: "0.2rem" }}>
                               <span style={{ fontSize: "0.6rem", color: "var(--gold-dim)", opacity: 0.8 }}>S</span>
                               {sellEntry.price.toLocaleString()}
                             </span>
@@ -218,10 +175,7 @@ export default function PricesPage() {
 
       {/* Tooltip */}
       {tooltip && (
-        <div className="tooltip-parchment" style={{
-          position: "fixed", left: tooltip.x, top: tooltip.y,
-          zIndex: 9999, pointerEvents: "none", minWidth: 210,
-        }}>
+        <div className="tooltip-parchment" style={{ position: "fixed", left: tooltip.x, top: tooltip.y, zIndex: 9999, pointerEvents: "none", minWidth: 210 }}>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 600, fontSize: "0.95rem", marginBottom: "0.4rem", color: "var(--ink)", borderBottom: "1px solid var(--parchment-dark)", paddingBottom: "0.3rem" }}>
             {tooltip.item} — {tooltip.city}
           </div>

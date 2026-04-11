@@ -1,5 +1,6 @@
-import type { PriceMap, TradeOpportunity } from "@/types";
+import type { PriceMap, TradeOpportunity, ModifierMap } from "@/types";
 import { isStale } from "./sheets";
+import { getModifierBonus } from "./modifiers";
 
 /**
  * Compute all profitable trade opportunities across every city-pair.
@@ -8,11 +9,13 @@ import { isStale } from "./sheets";
  *   1. CONFIRMED  — actual Sell entry exists in destination city
  *                   Profit = Sell price in dest - Buy price in origin
  *   2. ESTIMATED  — no Sell data; use Buy price in destination as proxy
- *                   Profit = Buy price in dest - Buy price in origin
  *
- * Confirmed routes are sorted above estimated ones at the same profit level.
+ * Modifier bonuses applied to adjusted profit when city has active modifiers.
  */
-export function computeTradeOpportunities(priceMap: PriceMap): TradeOpportunity[] {
+export function computeTradeOpportunities(
+  priceMap: PriceMap,
+  modifierMap: ModifierMap = {}
+): TradeOpportunity[] {
   const opportunities: TradeOpportunity[] = [];
 
   for (const [itemName, cityMap] of Object.entries(priceMap)) {
@@ -28,7 +31,6 @@ export function computeTradeOpportunities(priceMap: PriceMap): TradeOpportunity[
         const buyEntry = cityMap[buyCity]?.Buy;
         if (!buyEntry) continue;
 
-        // Prefer actual Sell entry in the destination; fall back to Buy price estimate
         const actualSellEntry    = cityMap[sellCity]?.Sell;
         const estimatedSellEntry = cityMap[sellCity]?.Buy;
         const sellEntry = actualSellEntry ?? estimatedSellEntry;
@@ -41,16 +43,22 @@ export function computeTradeOpportunities(priceMap: PriceMap): TradeOpportunity[
         const stale = isStale(buyEntry.timestamp) || isStale(sellEntry.timestamp);
         const isLocalSell = sellEntry.local === true;
 
+        const { bonus, label } = getModifierBonus(itemName, sellCity, modifierMap);
+        const adjustedProfit = Math.round(profit * (1 + bonus));
+
         opportunities.push({
           itemName,
           buyCity,
           sellCity,
-          buyPrice:      buyEntry.price,
-          sellPrice:     sellEntry.price,
+          buyPrice:       buyEntry.price,
+          sellPrice:      sellEntry.price,
           profit,
-          buyTimestamp:  buyEntry.timestamp,
-          sellTimestamp: sellEntry.timestamp,
-          isStale:       stale,
+          adjustedProfit,
+          modifierBonus:  bonus,
+          modifierLabel:  label,
+          buyTimestamp:   buyEntry.timestamp,
+          sellTimestamp:  sellEntry.timestamp,
+          isStale:        stale,
           isLocalSell,
           profitConfirmed,
         });
@@ -58,26 +66,23 @@ export function computeTradeOpportunities(priceMap: PriceMap): TradeOpportunity[
     }
   }
 
-  // Deduplicate: keep highest profit per (item, buyCity, sellCity)
+  // Deduplicate: keep best per (item, buyCity, sellCity) — prefer confirmed, then highest adjustedProfit
   const best = new Map<string, TradeOpportunity>();
   for (const opp of opportunities) {
     const key = `${opp.itemName}::${opp.buyCity}::${opp.sellCity}`;
     const existing = best.get(key);
-    // Prefer confirmed over estimated; then higher profit
     if (
       !existing ||
       (!existing.profitConfirmed && opp.profitConfirmed) ||
-      (existing.profitConfirmed === opp.profitConfirmed && opp.profit > existing.profit)
+      (existing.profitConfirmed === opp.profitConfirmed && opp.adjustedProfit > existing.adjustedProfit)
     ) {
       best.set(key, opp);
     }
   }
 
   return Array.from(best.values()).sort((a, b) => {
-    // Confirmed beats estimated
     if (a.profitConfirmed !== b.profitConfirmed) return a.profitConfirmed ? -1 : 1;
-    // Local-sell routes deprioritised
     if (a.isLocalSell !== b.isLocalSell) return a.isLocalSell ? 1 : -1;
-    return b.profit - a.profit;
+    return b.adjustedProfit - a.adjustedProfit;
   });
 }

@@ -9,6 +9,7 @@ import {
   clearCache,
 } from "@/lib/sheets";
 import { computeTradeOpportunities } from "@/lib/trades";
+import { fetchModifiers, clearModifierCache } from "@/lib/modifiers";
 import { apiGuard, buildCorsHeaders } from "@/lib/apiGuard";
 import type { CityFreshness, DashboardStats } from "@/types";
 
@@ -21,13 +22,12 @@ export async function GET(request: Request) {
 
   const corsHeaders = buildCorsHeaders(request);
 
-  // ?refresh=true busts the server-side in-memory cache immediately
   const { searchParams } = new URL(request.url);
   if (searchParams.get("refresh") === "true") {
     clearCache();
+    clearModifierCache();
   }
 
-  // Prevent browser and CDN from caching this response
   const headers = {
     ...corsHeaders,
     "Cache-Control": "no-store, must-revalidate",
@@ -35,14 +35,18 @@ export async function GET(request: Request) {
   };
 
   try {
-    const allRows = await fetchAllRows();
+    // Fetch price rows and modifiers in parallel
+    const [allRows, modifierMap] = await Promise.all([
+      fetchAllRows(),
+      fetchModifiers().catch(() => ({})), // modifiers are optional — don't crash if tab missing
+    ]);
+
     const latestEntries = getLatestPrices(allRows);
     const priceMap = buildPriceMap(latestEntries);
     const cities = getAllCities(latestEntries);
     const items = getAllItems(latestEntries);
-    const trades = computeTradeOpportunities(priceMap);
+    const trades = computeTradeOpportunities(priceMap, modifierMap);
 
-    // City freshness — Math.abs() so timezone-skewed timestamps never go negative
     const freshness: CityFreshness[] = cities.map((city) => {
       const cityRows = allRows.filter((r) => r.city === city);
       const timestamps = cityRows
@@ -67,12 +71,8 @@ export async function GET(request: Request) {
       bestTrade: trades[0] ?? null,
     };
 
-    // Recent activity: last 20 raw rows (most recent first)
     const recentActivity = [...allRows]
-      .sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      )
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 20)
       .map((r) => ({ ...r, ageLabel: formatAge(r.timestamp) }));
 
@@ -87,10 +87,11 @@ export async function GET(request: Request) {
         priceMap,
         cities,
         items,
+        modifierMap,
         recentActivity,
         latestEntries,
         fetchedAt: new Date().toISOString(),
-        modeCounts: { buy: buyCount, sell: sellCount }, // diagnostic
+        modeCounts: { buy: buyCount, sell: sellCount },
       },
       { headers }
     );

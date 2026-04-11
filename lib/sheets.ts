@@ -69,8 +69,8 @@ function parseRows(rawValues: unknown[][]): RawRow[] {
 
     const local = String(localRaw ?? "").trim().toLowerCase() === "yes";
 
-    // Default missing store names to "Market" so they display gracefully
-    const storeName = store && String(store).trim() ? sanitize(String(store)) : "Market";
+    // Default missing store names to "Trading Hub" so they display gracefully
+    const storeName = store && String(store).trim() ? sanitize(String(store)) : "Trading Hub";
 
     rows.push({
       timestamp: sanitize(String(timestamp)),
