@@ -3,6 +3,10 @@ import "./globals.css";
 import NavBar from "@/components/NavBar";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const viewport: Viewport = {
   themeColor: "#1C1410",
@@ -56,7 +60,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={cn("font-sans", geist.variable)}>
       <body style={{ background: "var(--leather)", minHeight: "100vh" }}>
         <NavBar />
         <main style={{ minHeight: "calc(100vh - 60px)" }}>{children}</main>
