@@ -85,7 +85,7 @@ export default function OverviewPage() {
         <div style={{ background: "var(--leather-light)", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
           <div style={{ padding: "0.9rem 1.25rem", borderBottom: "1px solid var(--border-gold)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.2rem", color: "var(--gold)", margin: 0 }}>✦ Top Trade Opportunities</h2>
-            <a href="/routes" style={{ fontSize: "0.75rem", color: "var(--text-dim)", textDecoration: "none" }}>View all →</a>
+            <a href="/planner" style={{ fontSize: "0.75rem", color: "var(--text-dim)", textDecoration: "none" }}>Open Planner →</a>
           </div>
           {top5.length === 0 ? (
             <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-dim)", fontFamily: "'Cormorant Garamond', serif" }}>No trade opportunities found yet.</div>

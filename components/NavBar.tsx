@@ -4,14 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const LINKS = [
-  { href: "/", label: "Overview" },
+  { href: "/",          label: "Overview" },
   { href: "/calculator", label: "Calculator" },
-  { href: "/routes", label: "Routes" },
-  { href: "/planner", label: "Planner" },
-  { href: "/prices", label: "Price Grid" },
-  { href: "/modifiers", label: "Modifiers" },
-  { href: "/coverage", label: "Coverage" },
-  { href: "/history", label: "History" },
+  { href: "/planner",   label: "Route Planner" },
+  { href: "/modifiers", label: "City Modifiers" },
+  { href: "/coverage",  label: "Coverage" },
+  { href: "/history",   label: "History" },
 ];
 
 export default function NavBar() {
