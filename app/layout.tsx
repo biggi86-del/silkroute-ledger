@@ -3,10 +3,12 @@ import "./globals.css";
 import NavBar from "@/components/NavBar";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Geist } from "next/font/google";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
+import ScrollToTop from "@/components/ScrollToTop";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+
 
 export const viewport: Viewport = {
   themeColor: "#1C1410",
@@ -60,23 +62,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en" >
       <body style={{ background: "var(--leather)", minHeight: "100vh" }}>
-        <NavBar />
-        <main style={{ minHeight: "calc(100vh - 60px)" }}>{children}</main>
-        <footer
-          style={{
-            borderTop: "1px solid var(--border)",
-            padding: "1rem 2rem",
-            textAlign: "center",
-            color: "var(--text-dim)",
-            fontSize: "0.75rem",
-            fontFamily: "'Cormorant Garamond', serif",
-            letterSpacing: "0.1em",
-          }}
-        >
-          ✦ SilkRoute Ledger — Ancient routes. Modern intelligence. ✦
-        </footer>
+        <TooltipProvider>
+          <NavBar />
+          <main style={{ minHeight: "calc(100vh - 60px)" }}>{children}</main>
+          <footer style={{ borderTop: "1px solid var(--border)", padding: "1rem 2rem", textAlign: "center", color: "var(--text-dim)", fontSize: "0.75rem", fontFamily: "'Cormorant Garamond', serif", letterSpacing: "0.1em" }}>
+            ✦ SilkRoute Ledger — Ancient routes. Modern intelligence. ✦
+          </footer>
+          <Toaster position="bottom-right" theme="dark" toastOptions={{ style: { background: "var(--leather-light)", border: "1px solid var(--gold-dim)", color: "var(--parchment)", fontFamily: "'JetBrains Mono', monospace", fontSize: "0.8rem" } }} />
+          <ScrollToTop />
+        </TooltipProvider>
         <Analytics />
         <SpeedInsights />
       </body>

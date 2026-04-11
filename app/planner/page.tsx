@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { PageFade, slideInLeft } from "@/components/motion";
 import PageWrapper from "@/components/PageWrapper";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
@@ -487,6 +489,7 @@ export default function PlannerPage() {
   }
 
   return (
+    <PageFade>
     <PageWrapper
       title="Route Planner"
       subtitle="Find the most profitable full trading loop across multiple cities"
@@ -585,15 +588,16 @@ export default function PlannerPage() {
       {routes.length > 0 && (
         <>
           <QuickGuide />
-          <RouteCard route={routes[0]} modifierMap={modifierMap} rank={0} />
-
+          <motion.div variants={slideInLeft} initial="hidden" animate="show">
+            <RouteCard route={routes[0]} modifierMap={modifierMap} rank={0} />
+          </motion.div>
           {routes.length > 1 && (
             <>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1rem", color: "var(--text-dim)", margin: "1.25rem 0 0.75rem", letterSpacing: "0.05em" }}>
-                Alternative Routes
-              </div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1rem", color: "var(--text-dim)", margin: "1.25rem 0 0.75rem", letterSpacing: "0.05em" }}>Alternative Routes</div>
               {routes.slice(1).map((route, i) => (
-                <RouteCard key={i} route={route} modifierMap={modifierMap} rank={i + 1} />
+                <motion.div key={i} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2, delay: (i + 1) * 0.1 }}>
+                  <RouteCard route={route} modifierMap={modifierMap} rank={i + 1} />
+                </motion.div>
               ))}
             </>
           )}
@@ -604,5 +608,6 @@ export default function PlannerPage() {
         ✦ Profits per item per leg. Confirmed = real Sell scan data. est. = estimated from Buy price difference. City modifier bonuses applied automatically.
       </div>
     </PageWrapper>
+    </PageFade>
   );
 }

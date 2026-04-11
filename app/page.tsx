@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
+import CountUp from "react-countup";
+import { PageFade, staggerContainer, fadeInUp, slideInLeft, scaleUp, pulseGold } from "@/components/motion";
 import PageWrapper from "@/components/PageWrapper";
-import LoadingSpinner from "@/components/LoadingSpinner";
+import LoadingSpinner, { SkeletonCard } from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import RefreshButton from "@/components/RefreshButton";
 import { useDataFetch } from "@/hooks/useDataFetch";
@@ -49,15 +52,19 @@ function BestTradeCard({ trade }: { trade: TradeOpportunity }) {
   const fullCargo = (trade.adjustedProfit ?? trade.profit) * 21;
 
   return (
-    <div style={{
-      border: "2px solid var(--gold)",
-      borderRadius: 6,
-      background: "var(--leather-light)",
-      padding: "1.5rem 2rem",
-      marginBottom: "1rem",
-      position: "relative",
-      overflow: "hidden",
-    }}>
+    <motion.div
+      animate={{ boxShadow: ["0 0 0px rgba(201,162,74,0)", "0 0 12px rgba(201,162,74,0.35)", "0 0 0px rgba(201,162,74,0)"] }}
+      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+      style={{
+        border: "2px solid var(--gold)",
+        borderRadius: 6,
+        background: "var(--leather-light)",
+        padding: "1.5rem 2rem",
+        marginBottom: "1rem",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
       {/* Background accent */}
       <div style={{
         position: "absolute", top: 0, right: 0, width: 120, height: "100%",
@@ -145,7 +152,7 @@ function BestTradeCard({ trade }: { trade: TradeOpportunity }) {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -192,18 +199,12 @@ function BestLoopCard({ loop }: { loop: NonNullable<ApiData["bestLoop"]> }) {
 
 // ── Section 3: Stats Row ─────────────────────────────────────────────────────
 
-function StatCard({ label, value, color }: { label: string; value: string; color?: string }) {
+function StatCard({ label, value, color, numeric }: { label: string; value: string; color?: string; numeric?: number }) {
   return (
-    <div style={{
-      background: "var(--leather-light)", border: "1px solid var(--border)",
-      borderTop: "2px solid var(--gold-dim)", borderRadius: 4,
-      padding: "0.9rem 1.25rem", minWidth: 0, flex: 1,
-    }}>
-      <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Cormorant Garamond', serif", marginBottom: "0.3rem" }}>
-        {label}
-      </div>
+    <div style={{ background: "var(--leather-light)", border: "1px solid var(--border)", borderTop: "2px solid var(--gold-dim)", borderRadius: 4, padding: "0.9rem 1.25rem", minWidth: 0, flex: 1 }}>
+      <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Cormorant Garamond', serif", marginBottom: "0.3rem" }}>{label}</div>
       <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "1.4rem", color: color ?? "var(--parchment)", fontWeight: 500 }}>
-        {value}
+        {numeric !== undefined ? <CountUp end={numeric} duration={0.8} separator="," /> : value}
       </div>
     </div>
   );
@@ -219,12 +220,15 @@ function CityCard({ f, modifierMap }: { f: CityFreshness & { itemCount: number }
   const highlight   = hasConflict ? "rgba(139,46,46,0.08)" : hasHarvest ? "rgba(74,124,89,0.08)" : undefined;
 
   return (
-    <div style={{
-      background: highlight ?? "var(--leather-light)",
-      border: `1px solid ${hasConflict ? "rgba(139,46,46,0.3)" : hasHarvest ? "rgba(74,124,89,0.3)" : "var(--border)"}`,
-      borderRadius: 4, padding: "0.85rem 1rem",
-      minWidth: 140, flex: "1 1 140px",
-    }}>
+    <motion.div
+      variants={scaleUp} initial="rest" whileHover="hover"
+      style={{
+        background: highlight ?? "var(--leather-light)",
+        border: `1px solid ${hasConflict ? "rgba(139,46,46,0.3)" : hasHarvest ? "rgba(74,124,89,0.3)" : "var(--border)"}`,
+        borderRadius: 4, padding: "0.85rem 1rem",
+        minWidth: 140, flex: "1 1 140px", cursor: "default",
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.4rem" }}>
         <Link href={`/cities/${f.city.toLowerCase()}`} style={{
           fontFamily: "'Cormorant Garamond', serif", fontSize: "1rem",
@@ -258,7 +262,7 @@ function CityCard({ f, modifierMap }: { f: CityFreshness & { itemCount: number }
       <div style={{ fontSize: "0.68rem", color, fontFamily: "'JetBrains Mono', monospace", marginTop: "0.1rem" }}>
         {ageLabel(f.ageMinutes)}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -282,15 +286,19 @@ function PriceChangesCard({ changes }: { changes: PriceChange[] }) {
           <div style={{ padding: "0.75rem 1.25rem", fontSize: "0.8rem", color: "var(--text-dim)", fontStyle: "italic" }}>
             No price changes detected
           </div>
-        ) : changes.map((c, i) => {
+        ) : (
+          <motion.div variants={staggerContainer} initial="hidden" animate="show">
+          {changes.map((c, i) => {
           const up = c.delta > 0;
           return (
-            <div key={i} style={{
-              display: "flex", alignItems: "center", gap: "0.75rem",
-              padding: "0.45rem 1.25rem",
-              borderBottom: i < changes.length - 1 ? "1px solid rgba(61,42,26,0.3)" : undefined,
-            }}>
-              <span style={{ fontSize: "0.9rem" }}>{up ? "↑" : "↓"}</span>
+            <motion.div key={i}
+              variants={slideInLeft}
+              style={{
+                display: "flex", alignItems: "center", gap: "0.75rem",
+                padding: "0.45rem 1.25rem",
+                borderBottom: i < changes.length - 1 ? "1px solid rgba(61,42,26,0.3)" : undefined,
+              }}>
+              <span style={{ fontSize: "0.9rem", color: up ? "var(--profit-light)" : "var(--loss-light)" }}>{up ? "↑" : "↓"}</span>
               <span style={{ flex: 1, fontSize: "0.8rem", color: "var(--parchment)" }}>
                 {c.itemName} <span style={{ color: "var(--text-dim)" }}>in {c.city}</span>
                 <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginLeft: "0.3rem" }}>({c.mode})</span>
@@ -298,16 +306,14 @@ function PriceChangesCard({ changes }: { changes: PriceChange[] }) {
               <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.78rem", color: "var(--text-muted)" }}>
                 {c.oldPrice.toLocaleString()} → {c.newPrice.toLocaleString()}
               </span>
-              <span style={{
-                fontFamily: "'JetBrains Mono', monospace", fontSize: "0.82rem",
-                fontWeight: 600, color: up ? "var(--profit-light)" : "var(--loss-light)",
-                minWidth: 52, textAlign: "right",
-              }}>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.82rem", fontWeight: 600, color: up ? "var(--profit-light)" : "var(--loss-light)", minWidth: 52, textAlign: "right" }}>
                 {up ? "+" : ""}{c.delta.toLocaleString()}
               </span>
-            </div>
+            </motion.div>
           );
         })}
+          </motion.div>
+        )}
       </div>
     </div>
   );
@@ -333,61 +339,39 @@ export default function OverviewPage() {
   const dataAgeColor = freshnessColor(maxAge);
 
   return (
+    <PageFade>
     <PageWrapper
       title="Overview"
       subtitle="Trading intelligence — updated every 60 seconds"
       actions={<RefreshButton fetchedAt={fetchedAt} refreshing={refreshing} onRefresh={refresh} />}
     >
-      {/* Section 1: Best Trade */}
-      {bestTrade ? (
-        <BestTradeCard trade={bestTrade} />
-      ) : (
-        <div style={{
-          border: "2px solid var(--border)", borderRadius: 6,
-          background: "var(--leather-light)", padding: "2rem",
-          marginBottom: "1rem", textAlign: "center",
-          color: "var(--text-dim)", fontFamily: "'Cormorant Garamond', serif", fontSize: "1.1rem",
-        }}>
+      {bestTrade ? <BestTradeCard trade={bestTrade} /> : (
+        <div style={{ border: "2px solid var(--border)", borderRadius: 6, background: "var(--leather-light)", padding: "2rem", marginBottom: "1rem", textAlign: "center", color: "var(--text-dim)", fontFamily: "'Cormorant Garamond', serif", fontSize: "1.1rem" }}>
           No trade opportunities yet — more price scans needed.
         </div>
       )}
 
-      {/* Section 2: Best Loop */}
-      {bestLoop ? (
-        <BestLoopCard loop={bestLoop} />
-      ) : (
-        <div style={{
-          background: "var(--leather-light)", border: "1px solid var(--border)",
-          borderRadius: 4, padding: "0.9rem 1.5rem", marginBottom: "1rem",
-          color: "var(--text-dim)", fontSize: "0.82rem", display: "flex",
-          justifyContent: "space-between", alignItems: "center",
-        }}>
-          <span>Route planner needs more price data to calculate loops.</span>
-          <Link href="/planner" style={{ color: "var(--gold)", textDecoration: "none", fontSize: "0.82rem" }}>Open Planner →</Link>
-        </div>
-      )}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+        {bestLoop ? <BestLoopCard loop={bestLoop} /> : (
+          <div style={{ background: "var(--leather-light)", border: "1px solid var(--border)", borderRadius: 4, padding: "0.9rem 1.5rem", marginBottom: "1rem", color: "var(--text-dim)", fontSize: "0.82rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>Route planner needs more price data to calculate loops.</span>
+            <Link href="/planner" style={{ color: "var(--gold)", textDecoration: "none", fontSize: "0.82rem" }}>Open Planner →</Link>
+          </div>
+        )}
+      </motion.div>
 
-      {/* Section 3: Stats Row */}
       <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-        <StatCard label="Total Scans"    value={stats.totalScans.toLocaleString()} />
-        <StatCard label="Items Tracked"  value={stats.itemsTracked.toLocaleString()} />
-        <StatCard label="Cities Mapped"  value={stats.citiesMapped.toString()} />
-        <StatCard
-          label="Data Age"
-          value={ageLabel(maxAge)}
-          color={dataAgeColor}
-        />
+        <StatCard label="Total Scans"   value={stats.totalScans.toLocaleString()}   numeric={stats.totalScans} />
+        <StatCard label="Items Tracked" value={stats.itemsTracked.toLocaleString()} numeric={stats.itemsTracked} />
+        <StatCard label="Cities Mapped" value={stats.citiesMapped.toString()}        numeric={stats.citiesMapped} />
+        <StatCard label="Data Age"      value={ageLabel(maxAge)} color={dataAgeColor} />
       </div>
 
-      {/* Section 4: City Status */}
       <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-        {freshness.map((f) => (
-          <CityCard key={f.city} f={f} modifierMap={modifierMap} />
-        ))}
+        {freshness.map((f) => <CityCard key={f.city} f={f} modifierMap={modifierMap} />)}
       </div>
-
-      {/* Section 5: Price Changes */}
       <PriceChangesCard changes={priceChanges} />
     </PageWrapper>
+    </PageFade>
   );
 }
